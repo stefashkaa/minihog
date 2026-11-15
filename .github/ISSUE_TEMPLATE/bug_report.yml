@@ -1,0 +1,21 @@
+name: Bug report
+description: Report an analytics or integration problem
+labels: bug
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include package versions, browser or Node version, a minimal example, and the steps that reproduce the problem. Remove tokens and personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or sanitized event shapes

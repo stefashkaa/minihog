@@ -1,0 +1,25 @@
+{
+  "name": "demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "typecheck": "nuxt prepare && nuxt typecheck"
+  },
+  "dependencies": {
+    "@minihog/nuxt": "workspace:^",
+    "@rrweb/record": "2.2.2",
+    "@rrweb/rrweb-plugin-console-record": "2.2.2",
+    "vue": "3.5.45",
+    "web-vitals": "6.2.3",
+    "@minihog/core": "workspace:^",
+    "ogl": "^1.0.11"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.14",
+    "@types/node": "^26.6.6",
+    "nuxt": "4.6.4"
+  }
+}

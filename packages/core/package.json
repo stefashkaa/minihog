@@ -1,0 +1,138 @@
+{
+  "name": "@minihog/core",
+  "version": "0.1.0",
+  "description": "Small, modular PostHog client for modern browsers.",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "LICENSE-RRWEB",
+    "CHANGELOG.md",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js",
+      "default": "./dist/browser.js"
+    },
+    "./heatmaps": {
+      "types": "./dist/heatmaps.d.ts",
+      "import": "./dist/heatmaps.js",
+      "default": "./dist/heatmaps.js"
+    },
+    "./identity": {
+      "types": "./dist/identity.d.ts",
+      "import": "./dist/identity.js",
+      "default": "./dist/identity.js"
+    },
+    "./flags": {
+      "types": "./dist/flags.d.ts",
+      "import": "./dist/flags.js",
+      "default": "./dist/flags.js"
+    },
+    "./surveys": {
+      "types": "./dist/surveys.d.ts",
+      "import": "./dist/surveys.js",
+      "default": "./dist/surveys.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js",
+      "default": "./dist/errors.js"
+    },
+    "./web-vitals": {
+      "types": "./dist/web-vitals.d.ts",
+      "import": "./dist/web-vitals.js",
+      "default": "./dist/web-vitals.js"
+    },
+    "./replay": {
+      "types": "./dist/replay.d.ts",
+      "import": "./dist/replay.js",
+      "default": "./dist/replay.js"
+    },
+    "./replay-console": {
+      "types": "./dist/replay-console.d.ts",
+      "import": "./dist/replay-console.js",
+      "default": "./dist/replay-console.js"
+    },
+    "./replay-network": {
+      "types": "./dist/replay-network.d.ts",
+      "import": "./dist/replay-network.js",
+      "default": "./dist/replay-network.js"
+    },
+    "./remote-config": {
+      "types": "./dist/remote-config.d.ts",
+      "import": "./dist/remote-config.js",
+      "default": "./dist/remote-config.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "rimraf dist && pnpm build:version && tsc -p tsconfig.json && node scripts/build-replay.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "pnpm build",
+    "clean": "rimraf dist coverage",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:unit:coverage": "vitest run --config vitest.config.ts --coverage.enabled",
+    "publish:check": "node ../../scripts/check-package.mts --profile esm-only",
+    "build:version": "node scripts/build-version.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@rrweb/record": "^2.2.2",
+    "@rrweb/rrweb-plugin-console-record": "^2.2.2",
+    "web-vitals": "^6.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@rrweb/record": {
+      "optional": true
+    },
+    "@rrweb/rrweb-plugin-console-record": {
+      "optional": true
+    },
+    "web-vitals": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@rrweb/record": "2.2.2",
+    "@rrweb/rrweb-plugin-console-record": "2.2.2",
+    "web-vitals": "6.2.3"
+  },
+  "author": "Stefan Popov <hello@stefanpopov.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefashkaa/minihog.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/stefashkaa/minihog/issues"
+  },
+  "homepage": "https://github.com/stefashkaa/minihog/tree/main/packages/core#readme",
+  "private": false,
+  "keywords": [
+    "posthog",
+    "analytics",
+    "typescript",
+    "tree-shaking",
+    "minihog",
+    "session-replay",
+    "web-vitals"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

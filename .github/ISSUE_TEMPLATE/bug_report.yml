@@ -1,21 +1,86 @@
-name: Bug report
-description: Report an analytics or integration problem
+name: Bug Report
+description: Report a MiniHog analytics or integration problem
 labels: bug
 body:
-  - type: textarea
-    id: reproduction
+  - type: markdown
     attributes:
-      label: Reproduction
-      description: Include package versions, browser or Node version, a minimal example, and the steps that reproduce the problem. Remove tokens and personal data.
+      value: |
+        ## Bug: Please describe the issue clearly and provide steps to reproduce.
+  - type: input
+    id: title
+    attributes:
+      label: Bug Title
+      description: Short, descriptive title of the bug
+      placeholder: Duplicate pageviews after Nuxt route navigation
     validations:
       required: true
   - type: textarea
-    id: behavior
+    id: description
     attributes:
-      label: Expected and actual behavior
+      label: Description
+      description: What happened? What did you expect?
+      placeholder: Describe the bug in detail
     validations:
       required: true
   - type: textarea
-    id: evidence
+    id: steps
     attributes:
-      label: Logs or sanitized event shapes
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the bug
+      placeholder: |
+        1. Add @minihog/nuxt to a Nuxt application with pageview capture enabled
+        2. Open the home page and navigate to /about using NuxtLink
+        3. Inspect the $pageview events sent to /api/_ph/batch/
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs Actual Behavior
+      description: What did you expect to happen? What actually happened?
+      placeholder: |
+        **Expected:** One $pageview event for the /about navigation
+        **Actual:** Two $pageview events for the same navigation
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Node.js, package versions, and enabled MiniHog features
+      placeholder: |
+        - OS: macOS
+        - Browser: Chrome (include version)
+        - Node.js: 26.x
+        - Nuxt: 4.6.4
+        - minihog: 0.1.0
+        - @minihog/nuxt: 0.1.0
+        - Enabled features: pageviews, autocapture, session replay
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots if applicable; remove tokens and personal data
+      placeholder: Drag and drop images here
+    validations:
+      required: false
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal Reproduction
+      description: Provide a minimal code sample or reproduction link. Replace tokens and personal data with placeholders.
+      placeholder: |
+        ```ts
+        // nuxt.config.ts
+        export default defineNuxtConfig({
+          modules: ['@minihog/nuxt'],
+          minihog: {
+            key: 'phc_example',
+            browser: { pageviews: true }
+          }
+        });
+        ```
+    validations:
+      required: false

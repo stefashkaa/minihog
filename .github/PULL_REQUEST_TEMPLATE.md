@@ -1,12 +1,40 @@
-## Change
+## Description
 
-Describe the problem and resulting behavior.
+- **What does this PR do?**
+  - _A brief explanation of the change, its purpose, and how it impacts the codebase._
 
-## Validation
+- **Why is this change needed?**
+  - _Describe the problem the PR solves, the feature it adds or/and attach the related issue._
 
-Describe the tests and checks run. Include screenshots for demo changes.
+## Type of Change
 
-- [ ] Public API changes are documented.
-- [ ] Changed behavior has regression coverage.
-- [ ] Package changes include a Changeset.
-- [ ] No private tokens, events, or recordings are included.
+- [ ] Bug fix (non-breaking)
+- [ ] New feature (non-breaking)
+- [ ] Breaking change
+- [ ] Documentation update
+- [ ] Tests
+- [ ] Maintenance
+
+## Testing
+
+Describe how you tested your changes
+
+## Screenshots (if applicable)
+
+Add screenshots for UI changes
+
+## Checklist
+
+- [ ] Code follows project style guidelines
+- [ ] Self-review completed
+- [ ] Comments added for complex code
+- [ ] Documentation updated
+- [ ] No new warnings generated
+- [ ] Tests added/updated
+- [ ] All tests passing
+
+## Manual Coverage (Optional)
+
+[![Run Coverage Workflow](https://img.shields.io/badge/Run%20Coverage%20Workflow-GitHub%20Actions-2ea44f?logo=githubactions&logoColor=white)](https://github.com/stefashkaa/minihog/actions/workflows/coverage.yml)
+
+_Maintainers only (`write/maintain/admin` access): open the workflow, click `Run workflow`, and set `pr_number` to this PR number to post/update a coverage comment on this PR_

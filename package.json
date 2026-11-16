@@ -8,7 +8,8 @@
   },
   "scripts": {
     "build": "pnpm -r --filter \"./packages/**\" --stream run build",
-    "clean": "pnpm -r --filter \"./packages/**\" --stream run clean",
+    "clean": "pnpm -r --filter \"*\" --stream run clean",
+    "clean:modules": "pnpm -r --filter \"*\" --stream run clean:modules && rimraf node_modules",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -26,13 +27,15 @@
     "changeset": "changeset",
     "changeset:version": "changeset version && pnpm --filter minihog build:version && node scripts/format-changelog-dependencies.mts",
     "changeset:publish": "pnpm build && pnpm publish:check && changeset publish --no-git-tag",
-    "prepare": "husky",
     "dev:demo": "pnpm build && pnpm --filter demo dev",
+    "dev:prepare": "pnpm --filter demo prepare:deps",
     "build:demo": "pnpm --filter demo build",
-    "vercel-build": "pnpm build && pnpm build:demo",
+    "vercel-build": "pnpm build && pnpm dev:prepare && pnpm build:demo",
     "benchmark": "pnpm build && node scripts/compare-posthog.mts",
     "check:install": "node scripts/check-install.mts",
-    "comparison:update": "pnpm build && node scripts/compare-posthog.mts --update-docs && prettier --write COMPARISON.md"
+    "comparison:update": "pnpm build && node scripts/compare-posthog.mts --update-docs && prettier --write COMPARISON.md",
+    "prepare": "husky",
+    "prebuild": "pnpm -r --filter \"./packages/**\" --if-present --stream run dev:prepare"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

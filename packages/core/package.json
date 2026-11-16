@@ -77,10 +77,11 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "clean": "rimraf dist coverage",
+    "clean:modules": "rimraf node_modules",
     "build": "rimraf dist && pnpm build:version && tsc -p tsconfig.json && node scripts/build-replay.mts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json",
     "prepack": "pnpm build",
-    "clean": "rimraf dist coverage",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:unit:coverage": "vitest run --config vitest.config.ts --coverage.enabled",
     "publish:check": "node ../../scripts/check-package.mts --profile esm-only",

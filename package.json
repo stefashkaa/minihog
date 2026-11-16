@@ -17,7 +17,7 @@
     "typecheck": "tsc -p scripts/tsconfig.json && pnpm -r --filter \"./packages/**\" run typecheck && pnpm --filter demo typecheck",
     "check:peers": "pnpm peers check",
     "audit:prod": "pnpm audit --prod",
-    "size": "node scripts/check-size.mjs",
+    "size": "node scripts/check-size.mts",
     "test:unit": "pnpm -r --filter \"./packages/**\" run test:unit",
     "test:unit:coverage": "pnpm -r --filter \"./packages/**\" run test:unit:coverage",
     "test:e2e": "pnpm --filter @minihog/nuxt test:e2e",

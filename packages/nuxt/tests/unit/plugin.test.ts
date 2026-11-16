@@ -31,7 +31,7 @@ test('manual mode never schedules startup and reports initialization errors', as
   const client = await provide.minihog.start();
   expect(client).toBeDefined();
   await provide.minihog.stop();
-  expect(client.destroy).toHaveBeenCalled();
+  expect(client!.destroy).toHaveBeenCalled();
 });
 
 test.each(['ready', 'idle'])(
@@ -41,12 +41,12 @@ test.each(['ready', 'idle'])(
     useRuntimeConfig().public.minihog.start = start;
     const { provide } = plugin.setup();
     expect(initialize).not.toHaveBeenCalled();
-    onNuxtReady.mock.calls[0][0]();
+    onNuxtReady.mock.calls[0]![0]();
     await provide.minihog.start();
     expect(initialize).toHaveBeenCalledTimes(1);
-    expect(initialize.mock.calls[0][1]()).toBe(true);
+    expect(initialize.mock.calls[0]![1]()).toBe(true);
     await provide.minihog.stop();
-    expect(initialize.mock.calls[0][1]()).toBe(false);
+    expect(initialize.mock.calls[0]![1]()).toBe(false);
   }
 );
 
@@ -55,10 +55,10 @@ test('idle mode waits for requestIdleCallback with a bounded timeout', async () 
   vi.stubGlobal('window', { requestIdleCallback: idle });
   useRuntimeConfig().public.minihog.start = 'idle';
   const { provide } = plugin.setup();
-  onNuxtReady.mock.calls[0][0]();
-  expect(idle.mock.calls[0][1]).toEqual({ timeout: 2000 });
+  onNuxtReady.mock.calls[0]![0]();
+  expect(idle.mock.calls[0]![1]).toEqual({ timeout: 2000 });
   expect(initialize).not.toHaveBeenCalled();
-  idle.mock.calls[0][0]();
+  idle.mock.calls[0]![0]();
   await provide.minihog.start();
   expect(initialize).toHaveBeenCalledTimes(1);
 });

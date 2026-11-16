@@ -1,9 +1,10 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi, type TestContext } from 'vitest';
 import { createTransport } from '../../src/internal/transport.ts';
+import type { MiniHogOptions } from '../../src/types.js';
 
 afterEach(() => vi.useRealTimers());
-function transport(t, options = {}, native = false) {
-  const errors = [];
+function transport(t: TestContext, options: MiniHogOptions = {}, native = false) {
+  const errors: unknown[] = [];
   const request = vi.fn().mockResolvedValue(new Response('{}'));
   if (native) vi.stubGlobal('fetch', request);
   const transport = createTransport('test', '/proxy', { fetch: native ? undefined : request, ...options }, (error) =>
@@ -27,14 +28,14 @@ test('periodic flushing, queue count bounds, oversized events and stopped transp
   await vi.advanceTimersByTimeAsync(3000);
   expect(sender.request.mock.calls.flatMap(([, init]) => JSON.parse(init.body).batch)).toHaveLength(1000);
   sender.enqueue(event(1, 'x'.repeat(3 * 1024 * 1024)), '/batch/');
-  expect(sender.errors.at(-1).message).toContain('byte limit');
+  expect(sender.errors.at(-1)).toHaveProperty('message', expect.stringContaining('byte limit'));
   sender.stop();
   sender.enqueue(event(), '/batch/');
   await sender.flush();
 });
 
 test.each([408, 429, 503])('retryable HTTP %s preserves event identity and caps attempts', async (status) => {
-  const errors = [];
+  const errors: unknown[] = [];
   const request = vi.fn().mockResolvedValue(new Response('', { status }));
   const sender = createTransport('test', '/proxy', { fetch: request, maxRetries: 1 }, (e) => errors.push(e));
   sender.enqueue(event(), '/batch/');
@@ -44,12 +45,12 @@ test.each([408, 429, 503])('retryable HTTP %s preserves event identity and caps 
   sender.stop();
   expect(request).toHaveBeenCalledTimes(2);
   expect(errors).toHaveLength(2);
-  expect(request.mock.calls[0][1].body).toBe(request.mock.calls[1][1].body);
+  expect(request.mock.calls[0]![1].body).toBe(request.mock.calls[1]![1].body);
 });
 
 test('pending flush drains new events and beacon flush can run during a pending request', async (t) => {
   const sender = transport(t, {}, true);
-  let resolve;
+  let resolve!: (response: Response) => void;
   sender.request.mockImplementationOnce(
     () =>
       new Promise((done) => {
@@ -82,13 +83,13 @@ test('beacon budget and rejected beacons fall back to fetch without oversized ke
   sender.enqueue(event(2, 'x'.repeat(40000)), '/batch/');
   await sender.flush(true);
   expect(beacon).toHaveBeenCalledTimes(1);
-  expect(sender.request.mock.calls[0][1].keepalive).toBe(true);
+  expect(sender.request.mock.calls[0]![1].keepalive).toBe(true);
   sender.enqueue(event(3), '/s/');
   await sender.flush(true);
   expect(beacon).toHaveBeenCalledTimes(2);
   sender.enqueue(event(4, 'x'.repeat(70000)), '/batch/');
   await sender.flush(true);
-  expect(sender.request.mock.calls.at(-1)[1].keepalive).toBe(false);
+  expect(sender.request.mock.calls.at(-1)![1].keepalive).toBe(false);
 });
 
 test('timeouts abort fetch; retry does not displace new queued events', async (t) => {
@@ -103,14 +104,14 @@ test('timeouts abort fetch; retry does not displace new queued events', async (t
   sender.enqueue(event(2, 'x'.repeat(700)), '/batch/');
   await vi.advanceTimersByTimeAsync(10);
   await pending;
-  expect(sender.errors[0].message).toBe('timeout');
+  expect(sender.errors[0]).toHaveProperty('message', 'timeout');
   await sender.flush();
-  expect(JSON.parse(sender.request.mock.calls[1][1].body).batch[0].properties.n).toBe(2);
+  expect(JSON.parse(sender.request.mock.calls[1]![1].body).batch[0].properties.n).toBe(2);
 });
 
 test('stopping or clearing an in-flight request prevents retries', async (t) => {
   const sender = transport(t);
-  let reject;
+  let reject!: (error: Error) => void;
   sender.request.mockImplementation(
     () =>
       new Promise((_resolve, fail) => {

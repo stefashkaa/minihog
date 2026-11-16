@@ -1,7 +1,15 @@
 {
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "types": ["node"]
+    "allowImportingTsExtensions": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "paths": {
+      "#app": ["./mocks/app.ts"],
+      "#imports": ["./mocks/imports.ts"],
+      "#minihog-init": ["./mocks/init.ts"]
+    }
   },
-  "include": ["e2e/**/*.ts", "../playwright.config.ts"]
+  "include": ["unit/**/*.ts", "e2e/**/*.ts", "mocks/**/*.ts", "../playwright.config.ts", "../vitest.config.ts"]
 }

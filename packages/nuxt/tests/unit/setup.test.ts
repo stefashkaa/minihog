@@ -1,19 +1,34 @@
 import { beforeEach, expect, test, vi } from 'vitest';
-import module from '../../src/module.ts';
+import definition from '../../src/module.ts';
 import { initializerSource } from '../../src/templates.ts';
-import { addImports, addPlugin, addServerHandler, addTemplate } from '@nuxt/kit';
+import type { ModuleOptions, ProxyOptions, PublicOptions } from '../../src/types.js';
 
-vi.mock('@nuxt/kit', () => ({
-  defineNuxtModule: (definition) => definition,
-  createResolver: () => ({ resolve: (path) => '/module/' + path }),
-  addImports: vi.fn(),
-  addPlugin: vi.fn(),
-  addServerHandler: vi.fn(),
-  addTemplate: vi.fn((template) => ({ ...template, dst: '/build/' + template.filename }))
+const kit = vi.hoisted(() => ({
+  defineNuxtModule: <T>(definition: T) => definition,
+  createResolver: () => ({ resolve: (path: string) => '/module/' + path }),
+  addImports: vi.fn<(value: { name: string; from: string }) => void>(),
+  addPlugin: vi.fn<(value: { src: string; order: number }) => void>(),
+  addServerHandler: vi.fn<(value: { route: string; handler: string }) => void>(),
+  addTemplate: vi.fn((template: { filename: string; getContents: () => string }) => ({
+    ...template,
+    dst: '/build/' + template.filename
+  }))
 }));
+vi.mock('@nuxt/kit', () => kit);
 beforeEach(() => vi.clearAllMocks());
-const nuxt = () => ({ options: { runtimeConfig: { public: {} }, alias: {} }, hook: vi.fn() });
-const options = (extra = {}) => ({ ...module.defaults, ...extra });
+const nuxt = () => ({
+  options: {
+    runtimeConfig: { public: {} } as { minihog?: ProxyOptions; public: { minihog?: PublicOptions } },
+    alias: {} as Record<string, string>
+  },
+  hook: vi.fn<(name: string, callback: (manifest: Record<string, { prefetch?: boolean }>) => void) => void>()
+});
+// The kit mock returns the definition directly instead of Nuxt's module installer.
+const module = definition as unknown as {
+  defaults: ModuleOptions;
+  setup(options: ModuleOptions, app: ReturnType<typeof nuxt>): void;
+};
+const options = (extra: ModuleOptions = {}) => ({ ...module.defaults, ...extra });
 
 test.each([
   ['https://eu.i.posthog.com', 'https://eu-assets.i.posthog.com'],
@@ -29,10 +44,10 @@ test.each([
     start: 'ready',
     client: {}
   });
-  expect(addPlugin.mock.calls[0][0].order).toBe(-20);
-  expect(addImports.mock.calls[0][0].name).toBe('useMiniHog');
-  expect(addServerHandler.mock.calls[0][0].route).toBe('/api/_ph/**');
-  expect(addTemplate.mock.calls[0][0].getContents()).toContain('createMiniHog');
+  expect(kit.addPlugin.mock.calls[0]![0].order).toBe(-20);
+  expect(kit.addImports.mock.calls[0]![0].name).toBe('useMiniHog');
+  expect(kit.addServerHandler.mock.calls[0]![0].route).toBe('/api/_ph/**');
+  expect(kit.addTemplate.mock.calls[0]![0].getContents()).toContain('createMiniHog');
   expect(app.options.alias['@minihog/core/replay']).toMatch(/\/dist\/replay\.js$/);
   expect(app.options.alias['@minihog/core/identity']).toMatch(/\/dist\/identity\.js$/);
   expect(app.options.alias['@minihog/core/flags']).toMatch(/\/dist\/flags\.js$/);
@@ -42,7 +57,7 @@ test.each([
     'web-vitals.js': {},
     'app.js': { prefetch: true }
   };
-  app.hook.mock.calls[0][1](manifest);
+  app.hook.mock.calls[0]![1](manifest);
   expect(manifest['minihog.js'].prefetch).toBe(false);
   expect(manifest['app.js'].prefetch).toBe(true);
 });
@@ -64,7 +79,7 @@ test('validates proxy paths and handles explicit assets origin and optional sett
     app
   );
   expect(app.options.runtimeConfig.minihog).toMatchObject({ path: '/tracking', assetsHost: 'https://cdn.test' });
-  expect(app.options.runtimeConfig.public.minihog.client).toEqual({});
+  expect(app.options.runtimeConfig.public.minihog!.client).toEqual({});
 });
 
 test('template includes exactly the enabled features and gates remote restrictions', () => {

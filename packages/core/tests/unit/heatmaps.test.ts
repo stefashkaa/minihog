@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { fixture } from './helpers.mjs';
+import { fixture } from './helpers.ts';
 import { startHeatmaps } from '../../src/heatmaps.ts';
+import type { CaptureEvent } from '../../src/types.js';
+
+interface HeatmapPoint {
+  x: number;
+  y: number;
+  type: 'click' | 'mousemove' | 'rageclick' | 'deadclick';
+  target_fixed: boolean;
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -11,12 +19,16 @@ beforeEach(() => {
     '<button>Action</button><div style="position:fixed"><span>Fixed</span></div><a href="#">Native</a><input><div data-private><button>Private</button></div>';
 });
 afterEach(() => vi.useRealTimers());
-const mouse = (type, target = document.querySelector('button'), options = {}) =>
-  target.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: 10, clientY: 20, ...options }));
-const points = (events) => events.flatMap((e) => Object.values(e.properties.$heatmap_data).flat());
+const mouse = (
+  type: string,
+  target: EventTarget | null = document.querySelector('button'),
+  options: MouseEventInit = {}
+) => target!.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: 10, clientY: 20, ...options }));
+const points = (events: CaptureEvent[]) =>
+  events.flatMap((e) => Object.values(e.properties.$heatmap_data as Record<string, HeatmapPoint[]>).flat());
 
-test('heatmaps track fixed and document coordinates, rage clicks, movement and dead clicks', async (t) => {
-  const { client, events } = fixture(t);
+test('heatmaps track fixed and document coordinates, rage clicks, movement and dead clicks', async () => {
+  const { client, events } = fixture();
   startHeatmaps(client);
   vi.stubGlobal('scrollX', 100);
   vi.stubGlobal('scrollY', 200);
@@ -38,11 +50,11 @@ test('heatmaps track fixed and document coordinates, rage clicks, movement and d
   );
 });
 
-test('mutations before the deadline indicate a response; late mutations retain dead clicks', async (t) => {
-  const { client, events } = fixture(t);
+test('mutations before the deadline indicate a response; late mutations retain dead clicks', async () => {
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   mouse('click');
-  document.querySelector('button').title = 'responded';
+  document.querySelector('button')!.title = 'responded';
   await Promise.resolve();
   await vi.advanceTimersByTimeAsync(3000);
   stop();
@@ -50,14 +62,14 @@ test('mutations before the deadline indicate a response; late mutations retain d
   const next = startHeatmaps(client);
   mouse('click');
   await vi.advanceTimersByTimeAsync(2550);
-  document.querySelector('button').title = 'late';
+  document.querySelector('button')!.title = 'late';
   await Promise.resolve();
   next();
   expect(points(events).filter((p) => p.type === 'deadclick')).toHaveLength(1);
 });
 
-test('scroll and selection distinguish prompt feedback from late responses', async (t) => {
-  const { client, events } = fixture(t);
+test('scroll and selection distinguish prompt feedback from late responses', async () => {
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   mouse('click');
   document.dispatchEvent(new Event('scroll'));
@@ -74,8 +86,8 @@ test('scroll and selection distinguish prompt feedback from late responses', asy
   expect(points(events).filter((p) => p.type === 'deadclick')).toHaveLength(2);
 });
 
-test('private elements, modifiers, native controls, focus and selected text suppress dead clicks', async (t) => {
-  const { client, events } = fixture(t);
+test('private elements, modifiers, native controls, focus and selected text suppress dead clicks', async () => {
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   mouse('click', document);
   mouse('click', document.querySelector('[data-private] button'));
@@ -87,7 +99,7 @@ test('private elements, modifiers, native controls, focus and selected text supp
   mouse('click');
   window.dispatchEvent(new Event('blur'));
   await vi.advanceTimersByTimeAsync(1100);
-  vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => 'selected' });
+  vi.spyOn(window.getSelection()!, 'toString').mockReturnValue('selected');
   for (let i = 0; i < 3; i++) mouse('click', document.querySelector('a'), { clientX: 300 });
   await vi.advanceTimersByTimeAsync(3000);
   stop();
@@ -95,8 +107,8 @@ test('private elements, modifiers, native controls, focus and selected text supp
   expect(points(events).filter((p) => p.x === 300 && p.type === 'rageclick')).toHaveLength(0);
 });
 
-test('consent clears unsent points and pending movement; URL changes discard stale movement', async (t) => {
-  const { client, events } = fixture(t);
+test('consent clears unsent points and pending movement; URL changes discard stale movement', async () => {
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   mouse('click');
   mouse('mousemove');
@@ -118,8 +130,8 @@ test('consent clears unsent points and pending movement; URL changes discard sta
   expect(events).toHaveLength(0);
 });
 
-test('visibility and pagehide flush, teardown removes listeners and disconnected targets are ignored', async (t) => {
-  const { client, events } = fixture(t);
+test('visibility and pagehide flush, teardown removes listeners and disconnected targets are ignored', async () => {
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   mouse('click');
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
@@ -134,7 +146,7 @@ test('visibility and pagehide flush, teardown removes listeners and disconnected
   await vi.advanceTimersByTimeAsync(1001);
   mouse('click');
   // A removed target must not produce a dead-click diagnostic, even without mutation delivery.
-  vi.spyOn(document.querySelector('button'), 'isConnected', 'get').mockReturnValue(false);
+  vi.spyOn(document.querySelector('button')!, 'isConnected', 'get').mockReturnValue(false);
   await vi.advanceTimersByTimeAsync(2751);
   stop();
   expect(points(events).some((p) => p.type === 'deadclick')).toBe(false);
@@ -143,9 +155,9 @@ test('visibility and pagehide flush, teardown removes listeners and disconnected
   expect(events).toHaveLength(3);
 });
 
-test('bounds both candidate retention and batches during dense input', async (t) => {
+test('bounds both candidate retention and batches during dense input', async () => {
   document.body.innerHTML = '<a>Link</a>' + '<button>Button</button>'.repeat(51);
-  const { client, events } = fixture(t);
+  const { client, events } = fixture();
   const stop = startHeatmaps(client);
   for (const [i, button] of [...document.querySelectorAll('button')].entries())
     mouse('click', button, { clientX: i * 100 });

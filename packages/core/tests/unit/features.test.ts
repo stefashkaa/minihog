@@ -5,13 +5,14 @@ import { identify } from '../../src/identity.ts';
 import { createFeatureFlags } from '../../src/flags.ts';
 import { surveyShown, surveySent, surveyDismissed } from '../../src/surveys.ts';
 import { captureException } from '../../src/errors.ts';
+import type { IngestionBatch } from './helpers.ts';
 
 test('v2 flags support variants, payloads, unknown values, and deduplicated exposures', async (t) => {
-  const batches = [];
+  const batches: IngestionBatch[] = [];
   const client = createMiniHog('test', {
     persistence: 'memory',
     fetch: async (url, init) => {
-      if (url.includes('/flags/'))
+      if (String(url).includes('/flags/'))
         return Response.json({
           flags: {
             checkout: { enabled: true, variant: 'test', metadata: { id: 12, version: 2, payload: '{"color":"red"}' } },
@@ -19,6 +20,7 @@ test('v2 flags support variants, payloads, unknown values, and deduplicated expo
           },
           requestId: 'request'
         });
+      assert.ok(init && typeof init.body === 'string');
       batches.push(JSON.parse(init.body));
       return Response.json({});
     }
@@ -32,25 +34,25 @@ test('v2 flags support variants, payloads, unknown values, and deduplicated expo
   assert.deepEqual(flags.getFeatureFlagPayload('checkout'), { color: 'red' });
   flags.getFeatureFlag('checkout');
   await client.flush();
-  const events = batches[0].batch.filter((event) => event.properties.$feature_flag === 'checkout');
+  const events = batches[0]!.batch.filter((event) => event.properties.$feature_flag === 'checkout');
   assert.equal(events.length, 1);
-  assert.equal(events[0].properties.$feature_flag_request_id, 'request');
+  assert.equal(events[0]!.properties.$feature_flag_request_id, 'request');
 });
 
 test('an old identity response cannot replace a new identity evaluation', async (t) => {
-  const pending = [];
+  const pending: ((response: Response) => void)[] = [];
   const client = createMiniHog('test', {
     persistence: 'memory',
     fetch: async (url) =>
-      url.includes('/flags/') ? new Promise((resolve) => pending.push(resolve)) : Response.json({})
+      String(url).includes('/flags/') ? new Promise<Response>((resolve) => pending.push(resolve)) : Response.json({})
   });
   t.onTestFinished(() => client.destroy());
   const flags = createFeatureFlags(client);
   const first = flags.reload();
   identify(client, 'signed-in');
-  pending[1](Response.json({ flags: { value: { enabled: true, variant: 'new' } } }));
+  pending[1]!(Response.json({ flags: { value: { enabled: true, variant: 'new' } } }));
   await new Promise((resolve) => setImmediate(resolve));
-  pending[0](Response.json({ flags: { value: { enabled: true, variant: 'old' } } }));
+  pending[0]!(Response.json({ flags: { value: { enabled: true, variant: 'old' } } }));
   await first;
   assert.equal(flags.getFeatureFlag('value', false), 'new');
   client.optOut();
@@ -58,10 +60,11 @@ test('an old identity response cannot replace a new identity evaluation', async 
 });
 
 test('survey and exception helpers emit documented property names', async (t) => {
-  const batches = [];
+  const batches: IngestionBatch[] = [];
   const client = createMiniHog('test', {
     persistence: 'memory',
     fetch: async (_url, init) => {
+      assert.ok(init && typeof init.body === 'string');
       batches.push(JSON.parse(init.body));
       return Response.json({});
     }
@@ -77,12 +80,13 @@ test('survey and exception helpers emit documented property names', async (t) =>
   surveyDismissed(client, survey);
   captureException(client, new TypeError('Failed'));
   await client.flush();
-  const events = batches[0].batch;
+  const events = batches[0]!.batch;
   assert.deepEqual(
     events.map((event) => event.event),
     ['survey shown', 'survey sent', 'survey dismissed', '$exception']
   );
-  assert.equal(events[1].properties.$survey_response_question, 'Good');
-  assert.equal(events[1].properties.$survey_response_unknown, undefined);
-  assert.equal(events[3].properties.$exception_list[0].type, 'TypeError');
+  assert.equal(events[1]!.properties.$survey_response_question, 'Good');
+  assert.equal(events[1]!.properties.$survey_response_unknown, undefined);
+  assert.ok(Array.isArray(events[3]!.properties.$exception_list));
+  assert.equal(events[3]!.properties.$exception_list[0].type, 'TypeError');
 });

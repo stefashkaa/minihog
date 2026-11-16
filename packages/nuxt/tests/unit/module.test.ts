@@ -4,7 +4,7 @@ import { initializerSource } from '../../src/templates.ts';
 import { proxyTarget } from '../../src/runtime/server/routing.ts';
 
 const options = { host: 'https://eu.i.posthog.com', assetsHost: 'https://eu-assets.i.posthog.com', path: '/api/_ph' };
-const target = (path, method = 'GET') => proxyTarget(new URL(`https://site.test${path}`), method, options);
+const target = (path: string, method = 'GET') => proxyTarget(new URL(`https://site.test${path}`), method, options);
 
 test('proxy routes public endpoints and preserves queries', () => {
   assert.equal(target('/api/_ph/flags/?v=2&config=true', 'POST'), 'https://eu.i.posthog.com/flags/?v=2&config=true');

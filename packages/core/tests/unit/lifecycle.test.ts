@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { expect, test, vi } from 'vitest';
-import { fixture, memory } from './helpers.mjs';
+import { fixture, memory } from './helpers.ts';
 import { context, browserStorage, legacyState, read, validSession } from '../../src/internal/state.ts';
 import { createMiniHog } from '../../src/index.ts';
 import { identify, alias, group, setPersonProperties } from '../../src/identity.ts';
 
-test('validates tokens and keeps property registration independent of prototypes', async (t) => {
+test('validates tokens and keeps property registration independent of prototypes', async () => {
   expect(() => createMiniHog(' ')).toThrow('project token');
-  const { client, events } = fixture(t);
+  const { client, events } = fixture();
   client.register({ plan: 'pro' });
   client.registerOnce({ plan: 'free', toString: 'owned' });
   expect(client.getProperty('plan')).toBe('pro');
@@ -29,8 +29,8 @@ test('validates tokens and keeps property registration independent of prototypes
   expect(events).toHaveLength(0);
 });
 
-test('callback failures are isolated from capture, consent and cleanup', async (t) => {
-  const { client, errors } = fixture(t, {
+test('callback failures are isolated from capture, consent and cleanup', async () => {
+  const { client, errors } = fixture({
     beforeSend: () => {
       throw 'redaction failed';
     }
@@ -47,7 +47,7 @@ test('callback failures are isolated from capture, consent and cleanup', async (
   client.optIn();
   await client.destroy();
   expect(errors.map((e) => e.message)).toEqual(['redaction failed', 'observer', 'cleanup']);
-  const throwing = fixture(t, {
+  const throwing = fixture({
     onError: () => {
       throw Error('callback');
     },
@@ -58,39 +58,39 @@ test('callback failures are isolated from capture, consent and cleanup', async (
   expect(() => throwing.client.capture('safe')).not.toThrow();
 });
 
-test('DNT and default opt-out block capture even after opt-in', (t) => {
+test('DNT and default opt-out block capture even after opt-in', () => {
   vi.stubGlobal('navigator', { doNotTrack: '1' });
-  const { client } = fixture(t, { respectDnt: true, optOutByDefault: true });
+  const { client } = fixture({ respectDnt: true, optOutByDefault: true });
   client.optIn();
   expect(client.hasOptedOut()).toBe(true);
   expect(client.capture('blocked')).toBeUndefined();
 });
 
-test('identity operations obey person profile settings and consent', (t) => {
-  const { client, events } = fixture(t, { personProfiles: 'never' });
+test('identity operations obey person profile settings and consent', () => {
+  const { client, events } = fixture({ personProfiles: 'never' });
   const original = client.getDistinctId();
   identify(client, 'account');
   setPersonProperties(client, {});
   alias(client, 'other');
   expect(client.getDistinctId()).toBe(original);
   expect(events).toHaveLength(0);
-  const allowed = fixture(t, { personProfiles: 'always' });
+  const allowed = fixture({ personProfiles: 'always' });
   identify(allowed.client, '');
   alias(allowed.client, '');
   alias(allowed.client, allowed.client.getDistinctId());
   group(allowed.client, 'team', 'id');
   setPersonProperties(allowed.client, { name: 'Ada' }, { source: 'test' });
-  expect(allowed.events[0].properties).toMatchObject({ $set_once: { source: 'test' }, $process_person_profile: true });
+  expect(allowed.events[0]!.properties).toMatchObject({ $set_once: { source: 'test' }, $process_person_profile: true });
   allowed.client.optOut();
   identify(allowed.client, 'private');
   setPersonProperties(allowed.client, {});
   expect(allowed.events).toHaveLength(1);
 });
 
-test('migration handles cookies, malformed storage, and inaccessible browser storage', (t) => {
+test('migration handles cookies, malformed storage, and inaccessible browser storage', () => {
   const key = 'ph_cookie_posthog';
   document.cookie = key + '=' + encodeURIComponent(JSON.stringify({ distinct_id: 'cookie-user' }));
-  expect(legacyState(undefined, 'cookie').distinct_id).toBe('cookie-user');
+  expect(legacyState(undefined, 'cookie')!.distinct_id).toBe('cookie-user');
   document.cookie = key + '=%bad';
   expect(legacyState(undefined, 'cookie')).toBeUndefined();
   document.cookie = key + '=; max-age=0';
@@ -102,21 +102,22 @@ test('migration handles cookies, malformed storage, and inaccessible browser sto
     throw Error('blocked');
   });
   expect(browserStorage()).toBeUndefined();
-  const { client } = fixture(t, { persistence: 'localStorage', migratePostHog: false, persistenceKey: 'custom' });
+  const { client } = fixture({ persistence: 'localStorage', migratePostHog: false, persistenceKey: 'custom' });
   expect(client.getDistinctId()).toBeTruthy();
 });
 
-test('storage events synchronize identity, sessions and opt-out across tabs', async (t) => {
+test('storage events synchronize identity, sessions and opt-out across tabs', async () => {
   const storage = memory();
-  const { client, requests } = fixture(t, { storage, persistence: 'localStorage' });
+  const { client, requests } = fixture({ storage, persistence: 'localStorage' });
   const identity = vi.fn();
   const session = vi.fn();
   const consent = vi.fn();
   const offIdentity = client.onIdentityChange(identity);
   const offSession = client.onSessionChange(session);
   client.onConsentChange(consent);
-  const state = JSON.parse(storage.getItem('minihog_test'));
-  const dispatch = (key, newValue) => window.dispatchEvent(new StorageEvent('storage', { key, newValue }));
+  const state = JSON.parse(storage.getItem('minihog_test')!);
+  const dispatch = (key: string, newValue: string | null) =>
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue }));
   for (const value of [
     {},
     { ...state, distinctId: 1 },

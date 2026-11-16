@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { fixture } from './helpers.mjs';
+import { fixture } from './helpers.ts';
 import { startSessionReplay } from '../../src/replay.ts';
 
 const recorder = vi.hoisted(() => ({ record: vi.fn(), stop: vi.fn() }));
@@ -14,11 +14,14 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 const snapshot = (data = {}) => ({ type: 2, data, timestamp: Date.now() });
 
-test('replay masks inputs, uses separate ingestion and preserves snapshot session metadata', (t) => {
-  const { client, events } = fixture(t);
-  const controller = startSessionReplay(client, { plugins: [{ name: 'test' }], maskTextSelector: '.private' });
+test('replay masks inputs, uses separate ingestion and preserves snapshot session metadata', () => {
+  const { client, events } = fixture();
+  const controller = startSessionReplay(client, {
+    plugins: [{ name: 'test', options: {} }],
+    maskTextSelector: '.private'
+  });
   expect(controller.isRecording()).toBe(true);
-  const options = recorder.record.mock.calls[0][0];
+  const options = recorder.record.mock.calls[0]![0];
   expect(options).toMatchObject({
     maskAllInputs: true,
     blockClass: 'ph-no-capture',
@@ -28,7 +31,7 @@ test('replay masks inputs, uses separate ingestion and preserves snapshot sessio
   });
   options.emit(snapshot({ node: 'safe' }));
   controller.flush();
-  expect(events[0]).toMatchObject({
+  expect(events[0]!).toMatchObject({
     event: '$snapshot',
     properties: {
       $lib: 'web',
@@ -37,7 +40,7 @@ test('replay masks inputs, uses separate ingestion and preserves snapshot sessio
       $snapshot_data: [{ type: 2, data: { node: 'safe' } }]
     }
   });
-  expect(events[0].properties.$snapshot_bytes).toBeGreaterThan(0);
+  expect(events[0]!.properties.$snapshot_bytes).toBeGreaterThan(0);
   controller.stop();
   controller.stop();
   options.emit(snapshot());
@@ -46,8 +49,8 @@ test('replay masks inputs, uses separate ingestion and preserves snapshot sessio
   expect(recorder.stop).toHaveBeenCalledTimes(1);
 });
 
-test('idle recordings pause and resume only after activity, with throttled session touches', async (t) => {
-  const { client } = fixture(t);
+test('idle recordings pause and resume only after activity, with throttled session touches', async () => {
+  const { client } = fixture();
   const touch = vi.spyOn(client, 'touchSession');
   const controller = startSessionReplay(client, { idleTimeoutMs: 1000 });
   await vi.advanceTimersByTimeAsync(1001);
@@ -67,10 +70,10 @@ test('idle recordings pause and resume only after activity, with throttled sessi
   expect(recorder.record).toHaveBeenCalledTimes(4);
 });
 
-test('consent removes pending snapshots and restarting refreshes recorder ownership', (t) => {
-  const { client, events } = fixture(t);
+test('consent removes pending snapshots and restarting refreshes recorder ownership', () => {
+  const { client, events } = fixture();
   const replay = startSessionReplay(client);
-  const emit = recorder.record.mock.calls[0][0].emit;
+  const emit = recorder.record.mock.calls[0]![0].emit;
   emit(snapshot());
   client.optOut();
   emit(snapshot());
@@ -80,19 +83,19 @@ test('consent removes pending snapshots and restarting refreshes recorder owners
   expect(replay.isRecording()).toBe(false);
   client.optIn();
   expect(replay.isRecording()).toBe(true);
-  recorder.record.mock.calls.at(-1)[0].emit(snapshot());
+  recorder.record.mock.calls.at(-1)![0].emit(snapshot());
   client.reset();
-  expect(events[0].properties.$session_id).not.toBe(client.getSessionId());
+  expect(events[0]!.properties.$session_id).not.toBe(client.getSessionId());
   replay.stop();
   client.optOut();
   client.optIn();
   expect(replay.isRecording()).toBe(false);
 });
 
-test('minimum duration buffers snapshots, size limits flush, and excess buffering stops recording', async (t) => {
-  const { client, events, errors } = fixture(t);
+test('minimum duration buffers snapshots, size limits flush, and excess buffering stops recording', async () => {
+  const { client, events, errors } = fixture();
   const replay = startSessionReplay(client, { minimumDurationMs: 2000 });
-  const emit = recorder.record.mock.calls[0][0].emit;
+  const emit = recorder.record.mock.calls[0]![0].emit;
   emit(snapshot());
   await vi.advanceTimersByTimeAsync(1000);
   expect(events).toHaveLength(0);
@@ -104,16 +107,16 @@ test('minimum duration buffers snapshots, size limits flush, and excess bufferin
   expect(events).toHaveLength(2);
   replay.stop();
   const huge = startSessionReplay(client, { minimumDurationMs: 999999 });
-  recorder.record.mock.calls.at(-1)[0].emit(snapshot('x'.repeat(1024 * 1024)));
+  recorder.record.mock.calls.at(-1)![0].emit(snapshot('x'.repeat(1024 * 1024)));
   await vi.advanceTimersByTimeAsync(0);
   expect(huge.isRecording()).toBe(false);
-  expect(errors[0].message).toContain('1 MiB');
+  expect(errors[0]!.message).toContain('1 MiB');
 });
 
-test('hidden and pagehide flush snapshots; visible transitions do not flush', async (t) => {
-  const { client, events } = fixture(t);
+test('hidden and pagehide flush snapshots; visible transitions do not flush', async () => {
+  const { client, events } = fixture();
   startSessionReplay(client, { maskAllInputs: false, blockSelector: '.custom', recordCanvas: true });
-  const emit = recorder.record.mock.calls[0][0].emit;
+  const emit = recorder.record.mock.calls[0]![0].emit;
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
   emit(snapshot());
   document.dispatchEvent(new Event('visibilitychange'));
@@ -129,8 +132,8 @@ test('hidden and pagehide flush snapshots; visible transitions do not flush', as
   expect(events).toHaveLength(3);
 });
 
-test('sampling, unsupported startup and recorder exceptions leave no active owner', (t) => {
-  const { client, errors } = fixture(t);
+test('sampling, unsupported startup and recorder exceptions leave no active owner', () => {
+  const { client, errors } = fixture();
   for (const rate of [-1, 2, NaN, Infinity])
     expect(() => startSessionReplay(client, { sampleRate: rate })).toThrow('sampleRate');
   const excluded = startSessionReplay(client, { sampleRate: 0 });
@@ -147,11 +150,11 @@ test('sampling, unsupported startup and recorder exceptions leave no active owne
   expect(failed.isRecording()).toBe(false);
   failed.stop();
   const active = startSessionReplay(client);
-  expect(recorder.record.mock.calls.at(-1)[0].errorHandler(Error('observer failed'))).toBe(true);
-  const other = fixture(t);
+  expect(recorder.record.mock.calls.at(-1)![0].errorHandler(Error('observer failed'))).toBe(true);
+  const other = fixture();
   const duplicate = startSessionReplay(other.client);
   expect(duplicate.isRecording()).toBe(false);
-  expect(other.errors[0].message).toContain('Only one');
+  expect(other.errors[0]!.message).toContain('Only one');
   duplicate.stop();
   expect(active.isRecording()).toBe(true);
   active.stop();

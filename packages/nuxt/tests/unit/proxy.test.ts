@@ -1,4 +1,5 @@
-import { expect, test, vi } from 'vitest';
+import { expect, test, vi, type TestContext } from 'vitest';
+import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { createApp, toNodeListener } from 'h3';
@@ -7,24 +8,27 @@ import { useRuntimeConfig } from '../mocks/imports.ts';
 import { limitedBody } from '../../src/runtime/server/body.ts';
 
 vi.mock('../../src/runtime/server/body.ts', async (original) => ({
-  limitedBody: vi.fn((await original()).limitedBody)
+  limitedBody: vi.fn((await original<typeof import('../../src/runtime/server/body.ts')>()).limitedBody)
 }));
 
-async function server(t) {
+async function server(t: TestContext) {
   useRuntimeConfig.mockReturnValue({
     minihog: { host: 'https://ingest.test', assetsHost: 'https://assets.test', path: '/tracking' }
   });
   const app = createServer(toNodeListener(createApp().use(handler)));
-  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => app.listen(0, '127.0.0.1', resolve));
   t.onTestFinished(
     () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         app.closeAllConnections();
-        app.close(resolve);
+        app.close(() => resolve());
       })
   );
   const nativeFetch = globalThis.fetch;
-  return (path, init) => nativeFetch(`http://127.0.0.1:${app.address().port}/tracking${path}`, init);
+  const address = app.address();
+  assert.ok(address && typeof address !== 'string');
+  return (path: string, init?: RequestInit & { duplex?: 'half' }) =>
+    nativeFetch(`http://127.0.0.1:${address.port}/tracking${path}`, init);
 }
 
 test('proxy forwards public context and query strings without cookies, credentials or stale encoding', async (t) => {
@@ -54,7 +58,7 @@ test('proxy forwards public context and query strings without cookies, credentia
   });
   expect(response.status).toBe(202);
   expect(await response.json()).toEqual({ ok: true });
-  const [url, init] = upstream.mock.calls[0];
+  const [url, init] = upstream.mock.calls[0]!;
   expect(url).toBe('https://ingest.test/flags/?v=2');
   expect(init).toMatchObject({ body: '{}', method: 'POST', redirect: 'error' });
   expect(init.headers.cookie).toBeUndefined();
@@ -73,7 +77,7 @@ test('proxy restricts endpoints and methods and streams configuration responses'
   expect((await request('/static/file.js')).status).toBe(404);
   expect((await request('/batch/')).status).toBe(404);
   expect((await request('/array/token/config')).status).toBe(204);
-  expect(upstream.mock.calls[0][0]).toBe('https://assets.test/array/token/config');
+  expect(upstream.mock.calls[0]![0]).toBe('https://assets.test/array/token/config');
   expect(upstream).toHaveBeenCalledTimes(1);
 });
 
@@ -83,7 +87,9 @@ test('oversized fixed and chunked uploads return 413 and the next request still 
   vi.stubGlobal('fetch', upstream);
   expect((await request('/batch/', { method: 'POST', body: 'x'.repeat(2 * 1024 * 1024 + 1) })).status).toBe(413);
   const body = Readable.toWeb(Readable.from([Buffer.alloc(1024 * 1024), Buffer.alloc(1024 * 1024 + 1)]));
-  expect((await request('/s/', { method: 'POST', body, duplex: 'half' })).status).toBe(413);
+  expect((await request('/s/', { method: 'POST', body: body as unknown as BodyInit, duplex: 'half' })).status).toBe(
+    413
+  );
   expect((await request('/batch/', { method: 'POST', body: '{}' })).status).toBe(200);
   expect(upstream).toHaveBeenCalledTimes(1);
 });
@@ -93,6 +99,6 @@ test('upstream and body read failures return errors without crashing the server'
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Error('offline')));
   expect((await request('/batch/', { method: 'POST', body: '{}' })).status).toBe(502);
-  limitedBody.mockRejectedValueOnce(Error('broken stream'));
+  vi.mocked(limitedBody).mockRejectedValueOnce(Error('broken stream'));
   expect((await request('/batch/', { method: 'POST', body: '{}' })).status).toBe(500);
 });

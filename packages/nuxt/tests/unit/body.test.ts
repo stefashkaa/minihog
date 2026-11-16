@@ -28,14 +28,18 @@ test('an oversized HTTP upload returns 413 and leaves the server usable', async 
       response.end();
     }
   });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.onTestFinished(() => {
     server.closeAllConnections();
     server.close();
   });
-  const url = `http://127.0.0.1:${server.address().port}`;
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const url = `http://127.0.0.1:${address.port}`;
   const body = Readable.toWeb(Readable.from([new Uint8Array(10), new Uint8Array(10), new Uint8Array(10)]));
-  const oversized = await fetch(url, { method: 'POST', body, duplex: 'half' });
+  // Node and DOM declarations use distinct Web Stream types for the same runtime object.
+  const init: RequestInit & { duplex: 'half' } = { method: 'POST', body: body as unknown as BodyInit, duplex: 'half' };
+  const oversized = await fetch(url, init);
   assert.equal(oversized.status, 413);
   const next = await fetch(url, { method: 'POST', body: 'still running' });
   assert.equal(await next.text(), 'still running');

@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = process.cwd();
 const temporary = await mkdtemp(join(tmpdir(), 'minihog-consumer-'));
-const children = [];
+const children: ChildProcess[] = [];
 let closing = false;
-const env = { ...process.env, HUSKY: '0' };
+const env: NodeJS.ProcessEnv = { ...process.env, HUSKY: '0' };
 delete env.NO_COLOR;
 const pnpm = process.env.npm_execpath ?? 'pnpm';
-function run(args, cwd = temporary, extra = {}) {
+function run(args: string[], cwd = temporary, extra: NodeJS.ProcessEnv = {}) {
   const script = /\.[cm]?js$/.test(pnpm);
   execFileSync(script ? process.execPath : pnpm, script ? [pnpm, ...args] : args, {
     cwd,
@@ -76,7 +76,7 @@ try {
   for (const [port, key] of [
     [4317, 'phc_test'],
     [4318, '']
-  ]) {
+  ] as const) {
     const child = spawn(process.execPath, ['.output/server/index.mjs'], {
       cwd: temporary,
       stdio: 'inherit',

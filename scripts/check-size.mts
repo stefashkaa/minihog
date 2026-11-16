@@ -30,7 +30,7 @@ const fixtures = {
   }
 };
 
-async function bundle(contents) {
+async function bundle(contents: string) {
   return build({
     stdin: { contents, resolveDir: new URL('../packages/core/', import.meta.url).pathname },
     bundle: true,
@@ -44,16 +44,16 @@ async function bundle(contents) {
   });
 }
 
-const report = {};
-let coreInputs;
-const contributingInputs = (result) =>
-  Object.entries(Object.values(result.metafile.outputs)[0].inputs)
+const report: Record<string, { minifiedBytes: number; gzipBytes: number; budgetBytes: number }> = {};
+let coreInputs: string[] | undefined;
+const contributingInputs = (result: Awaited<ReturnType<typeof bundle>>) =>
+  Object.entries(Object.values(result.metafile.outputs)[0]!.inputs)
     .filter(([path, input]) => path !== '<stdin>' && input.bytesInOutput > 0)
     .map(([path]) => path)
     .sort();
 for (const [name, fixture] of Object.entries(fixtures)) {
   const result = await bundle(fixture.source);
-  const code = result.outputFiles[0].contents;
+  const code = result.outputFiles[0]!.contents;
   if (name === 'core') coreInputs = contributingInputs(result);
   const gzip = gzipSync(code).length;
   const inputs = Object.keys(result.metafile.inputs);

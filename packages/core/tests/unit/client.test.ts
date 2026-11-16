@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import { test, vi } from 'vitest';
+import { test, vi, type TestContext } from 'vitest';
 import { createMiniHog } from '../../src/index.ts';
 import { identify, alias, group, resetGroups, setPersonProperties } from '../../src/identity.ts';
 import { getRemoteConfig } from '../../src/remote-config.ts';
+import type { CaptureEvent, MiniHogOptions, StorageLike } from '../../src/types.js';
+import type { IngestionBatch } from './helpers.ts';
 
-function memory(entries = {}) {
+function memory(entries: Record<string, string> = {}): StorageLike {
   const values = new Map(Object.entries(entries));
   return {
     getItem: (key) => values.get(key) ?? null,
@@ -13,13 +15,14 @@ function memory(entries = {}) {
   };
 }
 
-function fixture(t, options = {}) {
-  const requests = [];
+function fixture<T = IngestionBatch>(t: TestContext, options: MiniHogOptions = {}) {
+  const requests: { url: string; init: RequestInit; body: T }[] = [];
   const client = createMiniHog('phc_test', {
     persistence: 'memory',
     flushIntervalMs: 60000,
     fetch: async (url, init) => {
-      requests.push({ url, init, body: JSON.parse(init.body) });
+      assert.ok(init && typeof init.body === 'string');
+      requests.push({ url: String(url), init, body: JSON.parse(init.body) as T });
       return new Response('{}');
     },
     ...options
@@ -44,14 +47,15 @@ test('capture produces the public batch envelope and snapshots mutable propertie
   client.capture('signup', properties, { timestamp: new Date('2026-01-01T00:00:00Z') });
   properties.plan.name = 'changed';
   await client.flush();
-  assert.equal(requests[0].url, '/api/_ph/batch/');
-  assert.equal(requests[0].body.api_key, 'phc_test');
-  const [event] = requests[0].body.batch;
-  assert.equal(event.properties.plan.name, 'free');
+  assert.equal(requests[0]!.url, '/api/_ph/batch/');
+  assert.equal(requests[0]!.body.api_key, 'phc_test');
+  const [event] = requests[0]!.body.batch;
+  assert.ok(event);
+  assert.deepEqual(event.properties.plan, { name: 'free' });
   assert.equal(event.properties.$process_person_profile, false);
   assert.equal(event.properties.distinct_id, client.getDistinctId());
   assert.equal(event.timestamp, '2026-01-01T00:00:00.000Z');
-  assert.equal(requests[0].init.credentials, 'omit');
+  assert.equal(requests[0]!.init.credentials, 'omit');
 });
 
 test('PostHog identity, device, and current session migrate without a new visitor', (t) => {
@@ -67,6 +71,7 @@ test('PostHog identity, device, and current session migrate without a new visito
   const { client } = fixture(t, { persistence: 'localStorage', storage });
   assert.equal(client.getDistinctId(), 'existing-user');
   const event = client.capture('continued');
+  assert.ok(event);
   assert.equal(event.properties.$device_id, 'device');
   assert.equal(event.properties.$session_id, 'session');
   assert.equal(event.properties.$process_person_profile, true);
@@ -95,13 +100,14 @@ test('a persisted logout takes precedence over the old PostHog identity on reloa
   first.reset();
   const second = fixture(t, { persistence: 'localStorage', storage }).client;
   const event = second.capture('anonymous-after-logout');
+  assert.ok(event);
   assert.notEqual(second.getDistinctId(), 'old-account');
   assert.equal(event.properties.$is_identified, false);
   assert.equal(event.properties.$process_person_profile, false);
 });
 
 test('opt-out clears queued events and prevents retrying an in-flight failure', async (t) => {
-  let reject;
+  let reject!: (error: Error) => void;
   let calls = 0;
   const { client } = fixture(t, {
     fetch: () => {
@@ -132,12 +138,12 @@ test('identity links the anonymous visitor once, then supports person and group 
   resetGroups(client);
   alias(client, 'old-account');
   await client.flush();
-  const events = requests[0].body.batch;
-  assert.equal(events[0].properties.$anon_distinct_id, anonymous);
-  assert.equal(events[1].properties.$anon_distinct_id, undefined);
-  assert.equal(events[2].event, '$groupidentify');
-  assert.deepEqual(events[3].properties.$groups, { company: 'team-1' });
-  assert.equal(events[4].properties.alias, 'old-account');
+  const events = requests[0]!.body.batch;
+  assert.equal(events[0]!.properties.$anon_distinct_id, anonymous);
+  assert.equal(events[1]!.properties.$anon_distinct_id, undefined);
+  assert.equal(events[2]!.event, '$groupidentify');
+  assert.deepEqual(events[3]!.properties.$groups, { company: 'team-1' });
+  assert.equal(events[4]!.properties.alias, 'old-account');
   client.reset();
   assert.notEqual(client.getDistinctId(), 'account-1');
   assert.equal(client.getProperty('$groups'), undefined);
@@ -149,8 +155,8 @@ test('passive diagnostics do not extend idle sessions; activity rotates after 30
   const { client } = fixture(t);
   const before = client.getSessionId();
   now += 31 * 60000;
-  assert.equal(client.capture('$web_vitals', {}, { passive: true }).properties.$session_id, before);
-  assert.notEqual(client.capture('click').properties.$session_id, before);
+  assert.equal(client.capture('$web_vitals', {}, { passive: true })!.properties.$session_id, before);
+  assert.notEqual(client.capture('click')!.properties.$session_id, before);
 });
 
 test('setting anonymous person properties does not prevent a later identity merge', async (t) => {
@@ -159,8 +165,8 @@ test('setting anonymous person properties does not prevent a later identity merg
   setPersonProperties(client, { plan: 'free' });
   identify(client, 'signed-in');
   await client.flush();
-  assert.equal(requests[0].body.batch[0].properties.$is_identified, false);
-  assert.equal(requests[0].body.batch[1].properties.$anon_distinct_id, anonymous);
+  assert.equal(requests[0]!.body.batch[0]!.properties.$is_identified, false);
+  assert.equal(requests[0]!.body.batch[1]!.properties.$anon_distinct_id, anonymous);
 });
 
 test('a session rotated in another tab is adopted', (t) => {
@@ -175,10 +181,11 @@ test('a session rotated in another tab is adopted', (t) => {
 });
 
 test('bounded retries keep the same event UUID and permanent failures are dropped', async (t) => {
-  const bodies = [];
+  const bodies: IngestionBatch[] = [];
   let status = 503;
   const { client } = fixture(t, {
     fetch: async (_url, init) => {
+      assert.ok(init && typeof init.body === 'string');
       bodies.push(JSON.parse(init.body));
       return new Response('{}', { status });
     }
@@ -187,7 +194,7 @@ test('bounded retries keep the same event UUID and permanent failures are droppe
   await client.flush();
   status = 200;
   await client.flush();
-  assert.equal(bodies[0].batch[0].uuid, bodies[1].batch[0].uuid);
+  assert.equal(bodies[0]!.batch[0]!.uuid, bodies[1]!.batch[0]!.uuid);
   status = 400;
   client.capture('invalid');
   await client.flush();
@@ -196,15 +203,15 @@ test('bounded retries keep the same event UUID and permanent failures are droppe
 });
 
 test('queue limits and invalid input cannot break the caller', async (t) => {
-  const errors = [];
+  const errors: Error[] = [];
   const { client, requests } = fixture(t, { maxQueueBytes: 1500, onError: (error) => errors.push(error) });
-  const cycle = {};
+  const cycle: { self?: unknown } = {};
   cycle.self = cycle;
   client.capture('invalid', cycle);
   for (let i = 0; i < 20; i++) client.capture('event', { i });
   await client.flush();
   assert.ok(errors.length > 0);
-  assert.ok(requests[0].body.batch.length < 20);
+  assert.ok(requests[0]!.body.batch.length < 20);
 });
 
 test('storage failures fall back to memory; beforeSend can redact or drop events', async (t) => {
@@ -227,20 +234,20 @@ test('storage failures fall back to memory; beforeSend can redact or drop events
   client.capture('private');
   client.capture('public');
   await client.flush();
-  assert.equal(requests[0].body.batch.length, 1);
+  assert.equal(requests[0]!.body.batch.length, 1);
   client.optOut();
   assert.equal(client.hasOptedOut(), true);
 });
 
 test('replay uses its separate ingestion envelope and passive session ID', async (t) => {
-  const { client, requests } = fixture(t);
+  const { client, requests } = fixture<CaptureEvent[]>(t);
   client.capture(
     '$snapshot',
     { $snapshot_data: [{ type: 4, data: {}, timestamp: Date.now() }] },
     { endpoint: '/s/', passive: true }
   );
   await client.flush();
-  assert.ok(requests[0].url.endsWith('/s/'));
-  assert.equal(requests[0].body[0].properties.token, 'phc_test');
-  assert.equal(requests[0].body[0].event, '$snapshot');
+  assert.ok(requests[0]!.url.endsWith('/s/'));
+  assert.equal(requests[0]!.body[0]!.properties.token, 'phc_test');
+  assert.equal(requests[0]!.body[0]!.event, '$snapshot');
 });

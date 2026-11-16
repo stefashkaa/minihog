@@ -10,7 +10,7 @@ export default defineConfig({
   timeout: 30000,
   use: { baseURL: 'http://127.0.0.1:4317', headless: true, trace: 'retain-on-failure' },
   webServer: {
-    command: 'node scripts/serve-packed-fixture.mjs',
+    command: 'node scripts/serve-packed-fixture.mts',
     cwd: fileURLToPath(new URL('../../', import.meta.url)),
     url: 'http://127.0.0.1:4317',
     timeout: 180000,

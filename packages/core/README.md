@@ -152,11 +152,33 @@ replay.stop();
 
 Only one recorder can run in a document. Inputs are masked by default; `.ph-no-capture`, `.ph-sensitive`, and `[data-private]` elements are blocked. `maskTextSelector` can mask displayed text. Console output can contain application data and needs its own review. The network plugin records timings and URLs, never headers or bodies.
 
-Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2 and removes its compatibility repair for pages with a broken `Array.from`. It verifies the upstream SHA-256 before applying that change. The `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
+Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2, removes its compatibility repair for pages with a broken `Array.from`, and corrects its native DOM method checks to avoid an unnecessary startup iframe. Patched DOM APIs retain the clean-realm fallback. The build verifies the upstream SHA-256 before applying these changes. The `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
 
-Snapshots omit scripts, script preload links, comments, and whitespace inside `<head>` by default, while retaining styles and visible content. Pass `slimDOMOptions: {}` to retain those nodes. Replay batches reuse serialized JSON and UTF-8 byte counts; `beforeSend` still receives ordinary event objects and can redact, replace, or drop them. See the [performance guide](https://github.com/stefashkaa/minihog/blob/main/PERFORMANCE.md) for startup scheduling, worker trade-offs, and measurement.
+Snapshots omit scripts, script preload links, comments, and whitespace inside `<head>` by default, while retaining styles and visible content. Pass `slimDOMOptions: {}` to retain those nodes. Replay batches reuse serialized JSON and UTF-8 byte counts; `beforeSend` still receives ordinary event objects and can redact, replace, or drop them. Keep that hook lightweight and use recorder masking options for DOM privacy rules.
+
+Canvas pixels are excluded by default; set `recordCanvas: true` when they are needed. Full DOM snapshots run synchronously, so larger documents and frequent mutations cost more to record. Sampling reduces the number of recorded sessions; a minimum duration reduces uploads but still records events while waiting.
 
 Replay uses PostHog's SDK snapshot ingestion format. That protocol has a weaker compatibility guarantee than the documented capture and flags APIs. Advanced remote recording triggers, network payload capture, toolbar integrations, and all `posthog-js` replay controls are not implemented.
+
+### Delay loading replay
+
+Use dynamic imports to defer downloading and evaluating the recorder until your application's critical content is ready:
+
+```ts
+async function startReplay(analytics: import('minihog').MiniHog) {
+  const [{ startSessionReplay }, { consoleRecordingPlugin }, { networkTimingPlugin }] = await Promise.all([
+    import('minihog/replay'),
+    import('minihog/replay-console'),
+    import('minihog/replay-network')
+  ]);
+
+  return startSessionReplay(analytics, {
+    plugins: [consoleRecordingPlugin(), networkTimingPlugin(analytics.apiHost)]
+  });
+}
+```
+
+Call `await startReplay(analytics)` once the application is ready and any required consent is granted. Replay starts at that point; earlier interactions are not recorded. Keep the returned controller and call `stop()` when recording is no longer needed. Nuxt applications can use the module's [manual startup](https://github.com/stefashkaa/minihog/tree/main/packages/nuxt#delay-initialization).
 
 ## Contributing
 

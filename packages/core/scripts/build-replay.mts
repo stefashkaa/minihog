@@ -24,6 +24,34 @@ const shim = `try {
 }`;
 if (upstream.split(shim).length !== 2) throw new Error('Expected exactly one rrweb compatibility shim.');
 
+// rrweb lists selector methods as accessors, so even an untouched Element
+// prototype fails its native check and creates a temporary iframe. Classify
+// them as methods instead; patched methods/getters still use the clean realm.
+const elementAccessors = `Element: [
+\t\t"shadowRoot",
+\t\t"querySelector",
+\t\t"querySelectorAll"
+\t]`;
+const elementMethods = 'Element: []';
+const methodCheck =
+  'methodNames.every((method) => typeof defaultPrototype[method] === "function" && defaultPrototype[method]?.toString().includes("[native code]"))';
+if (upstream.split(elementAccessors).length !== 2 || upstream.split(elementMethods).length !== 2) {
+  throw new Error('Expected exactly one rrweb Element accessor and method list.');
+}
+if (upstream.split(methodCheck).length !== 2) throw new Error('Expected exactly one rrweb native method check.');
+const modernSource = upstream
+  .replace(shim, '')
+  .replace(elementAccessors, 'Element: ["shadowRoot"]')
+  .replace(elementMethods, 'Element: ["querySelector", "querySelectorAll"]')
+  // Inspect descriptors without executing page-defined getters or toString methods.
+  .replace(
+    methodCheck,
+    `methodNames.every((method) => {
+      const value = Object.getOwnPropertyDescriptor(defaultPrototype, method)?.value;
+      return typeof value === "function" && Function.prototype.toString.call(value).includes("[native code]");
+    })`
+  );
+
 await build({
   entryPoints: ['src/replay.ts'],
   outfile: 'dist/replay.js',
@@ -39,7 +67,7 @@ await build({
       name: 'modern-rrweb',
       setup(builder) {
         builder.onLoad({ filter: /[/\\]@rrweb[/\\]record[/\\]dist[/\\]record\.js$/ }, async () => ({
-          contents: upstream.replace(shim, ''),
+          contents: modernSource,
           loader: 'js'
         }));
       }

@@ -67,8 +67,6 @@ The API uses explicit imports and camelCase methods. It does not provide the ful
 
 Tree-shaking removes unused features. Enabled replay still requires recorder code and runtime work. Performance depends on the enabled features and the host application; measure the production build with those features active.
 
-The [performance guide](PERFORMANCE.md) covers delayed startup, snapshot and serialization optimizations, workers, and measuring interactions with recording enabled.
-
 MiniHog is an independent project and is not affiliated with PostHog.
 
 ## Development

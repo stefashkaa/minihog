@@ -6,14 +6,14 @@ Measured 2026-11-16 against posthog-js 1.450.0.
 
 | Workload                                           | Client     | JavaScript gzip (KiB) | Startup script CPU (ms) | Capture 500 events (ms) |
 | -------------------------------------------------- | ---------- | --------------------: | ----------------------: | ----------------------: |
-| Events (standard)                                  | MiniHog    |                  3.57 |                    0.74 |                    4.30 |
-| Events (standard)                                  | posthog-js |                128.61 |                   24.15 |                   52.20 |
-| Events (slim)                                      | MiniHog    |                  3.57 |                    0.74 |                    4.30 |
-| Events (slim)                                      | posthog-js |                 54.97 |                   18.62 |                   50.50 |
-| Pageviews and clicks                               | MiniHog    |                  5.77 |                    8.42 |                    6.90 |
-| Pageviews and clicks                               | posthog-js |                128.62 |                   25.67 |                   52.80 |
-| Browser, heatmaps, replay, console/network, vitals | MiniHog    |                 37.89 |                   20.45 |                   10.10 |
-| Browser, heatmaps, replay, console/network, vitals | posthog-js |                210.50 |                   44.16 |                   75.80 |
+| Events (standard)                                  | MiniHog    |                  3.57 |                    0.79 |                    4.30 |
+| Events (standard)                                  | posthog-js |                128.61 |                   24.42 |                   53.10 |
+| Events (slim)                                      | MiniHog    |                  3.57 |                    0.86 |                    4.30 |
+| Events (slim)                                      | posthog-js |                 54.97 |                   20.20 |                   51.20 |
+| Pageviews and clicks                               | MiniHog    |                  5.77 |                    8.49 |                    6.80 |
+| Pageviews and clicks                               | posthog-js |                128.62 |                   26.56 |                   53.30 |
+| Browser, heatmaps, replay, console/network, vitals | MiniHog    |                 37.90 |                   17.29 |                   14.60 |
+| Browser, heatmaps, replay, console/network, vitals | posthog-js |                210.50 |                   47.41 |                   77.10 |
 
 ## Method
 

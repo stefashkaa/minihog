@@ -33,8 +33,26 @@ test('packed module preserves delayed startup, SPA events, masked replay and dia
   const { events, requests, scripts } = await intercept(page);
   await open(page);
   expect(requests).toHaveLength(0);
+  await page.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = '.replay-visible-marker { color: rgb(12, 34, 56); }';
+    document.head.append(style);
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.id = 'REPLAY_NONVISUAL_SCRIPT';
+    script.textContent = '{"data":"not needed for playback"}';
+    document.head.append(script);
+    document.body.append(document.createComment('REPLAY_NONVISUAL_COMMENT'));
+    const visible = document.createElement('p');
+    visible.className = 'replay-visible-marker';
+    visible.textContent = 'REPLAY_VISIBLE_CONTENT';
+    document.body.append(visible);
+  });
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('running');
+  await page.evaluate(() => {
+    document.querySelector('.replay-visible-marker')!.textContent = 'REPLAY_UPDATED_CONTENT';
+  });
   await page.evaluate(() => console.log('REPLAY_CONSOLE_MARKER'));
   await page.getByRole('button', { name: 'Record action' }).click();
   await page.getByRole('link', { name: 'About', exact: true }).click();
@@ -55,6 +73,11 @@ test('packed module preserves delayed startup, SPA events, masked replay and dia
   expect(replay).toContain('rrweb/console@1');
   expect(replay).toContain('REPLAY_CONSOLE_MARKER');
   expect(replay).toContain('rrweb/network@1');
+  expect(replay).toContain('REPLAY_VISIBLE_CONTENT');
+  expect(replay).toContain('REPLAY_UPDATED_CONTENT');
+  expect(replay).toContain('rgb(12, 34, 56)');
+  expect(replay).not.toContain('REPLAY_NONVISUAL_SCRIPT');
+  expect(replay).not.toContain('REPLAY_NONVISUAL_COMMENT');
   expect(replay).not.toContain('PRIVATE_REPLAY_VALUE');
   expect(scripts.every((url) => new URL(url).hostname === '127.0.0.1')).toBe(true);
   expect(requests.every((url) => !/\/static\/|\.js(?:\?|$)/.test(url))).toBe(true);

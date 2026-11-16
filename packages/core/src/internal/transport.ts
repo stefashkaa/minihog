@@ -1,10 +1,17 @@
-import type { CaptureEvent, MiniHogOptions } from '../types.js';
+import type { CaptureEvent, MiniHogOptions, Properties } from '../types.js';
 
 interface Pending {
   json: string;
   bytes: number;
   endpoint: '/batch/' | '/s/';
   attempts: number;
+}
+
+/** Internal JSON fragment produced by the recorder, never an untrusted string. */
+export interface SerializedProperty {
+  key: string;
+  json: string;
+  bytes: number;
 }
 
 const encoder = new TextEncoder();
@@ -20,6 +27,8 @@ export function createTransport(token: string, host: string, options: MiniHogOpt
   const controllers = new Set<AbortController>();
   const request = options.fetch ?? globalThis.fetch.bind(globalThis);
   const queueLimit = options.maxQueueBytes ?? 2 * 1024 * 1024;
+  const batchPrefix = `{"api_key":${JSON.stringify(token)},"batch":`;
+  const batchOverhead = encoder.encode(batchPrefix).byteLength + 1;
 
   function schedule(delay = options.flushIntervalMs ?? 3000) {
     if (!timer && !stopped && queue.length) timer = setTimeout(() => void flush(), delay);
@@ -34,12 +43,27 @@ export function createTransport(token: string, host: string, options: MiniHogOpt
     for (const controller of controllers) controller.abort();
   }
 
-  function enqueue(event: CaptureEvent, endpoint: Pending['endpoint']) {
+  function enqueue(event: CaptureEvent, endpoint: Pending['endpoint'], serialized?: SerializedProperty) {
     if (stopped) return;
     try {
       // Serialize at capture time: callers cannot mutate queued data afterward.
-      const json = JSON.stringify({ ...event, properties: { ...event.properties, token } });
-      const bytes = encoder.encode(json).byteLength;
+      const { properties: eventProperties, ...envelope } = event;
+      const properties: Properties = { ...eventProperties, token };
+      if (serialized && typeof properties.toJSON === 'function') {
+        // Custom JSON serialization must see the complete properties object.
+        properties[serialized.key] = JSON.parse(serialized.json);
+        serialized = undefined;
+      }
+      if (serialized) delete properties[serialized.key];
+      let json = JSON.stringify({ ...envelope, properties });
+      let bytes = encoder.encode(json).byteLength;
+      if (serialized) {
+        // properties is last in this envelope. Insert the already serialized value
+        // before its closing brace, without traversing the snapshot a second time.
+        const field = `,${JSON.stringify(serialized.key)}:`;
+        bytes += encoder.encode(field).byteLength + serialized.bytes;
+        json = `${json.slice(0, -2)}${field}${serialized.json}}}`;
+      }
       if (bytes > queueLimit) throw new Error('MiniHog event exceeds the queue byte limit.');
       while (queue.length && (queuedBytes + bytes > queueLimit || queue.length >= 1000)) {
         queuedBytes -= queue.shift()!.bytes;
@@ -70,8 +94,9 @@ export function createTransport(token: string, host: string, options: MiniHogOpt
         remaining--;
       }
       const events = `[${batch.map((item) => item.json).join(',')}]`;
-      const body = endpoint === '/s/' ? events : `{"api_key":${JSON.stringify(token)},"batch":${events}}`;
-      const bodyBytes = encoder.encode(body).byteLength;
+      const body = endpoint === '/s/' ? events : `${batchPrefix}${events}}`;
+      // Reuse UTF-8 sizes measured at capture time; brackets and commas are ASCII.
+      const bodyBytes = bytes + batch.length + 1 + (endpoint === '/s/' ? 0 : batchOverhead);
       const url = `${host}${endpoint}`;
       try {
         if (

@@ -154,6 +154,8 @@ Only one recorder can run in a document. Inputs are masked by default; `.ph-no-c
 
 Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2 and removes its compatibility repair for pages with a broken `Array.from`. It verifies the upstream SHA-256 before applying that change. The `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
 
+Snapshots omit scripts, script preload links, comments, and whitespace inside `<head>` by default, while retaining styles and visible content. Pass `slimDOMOptions: {}` to retain those nodes. Replay batches reuse serialized JSON and UTF-8 byte counts; `beforeSend` still receives ordinary event objects and can redact, replace, or drop them. See the [performance guide](https://github.com/stefashkaa/minihog/blob/main/PERFORMANCE.md) for startup scheduling, worker trade-offs, and measurement.
+
 Replay uses PostHog's SDK snapshot ingestion format. That protocol has a weaker compatibility guarantee than the documented capture and flags APIs. Advanced remote recording triggers, network payload capture, toolbar integrations, and all `posthog-js` replay controls are not implemented.
 
 ## Contributing

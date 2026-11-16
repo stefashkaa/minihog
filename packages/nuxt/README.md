@@ -73,6 +73,8 @@ Start analytics when your application's readiness condition is satisfied. Handle
 
 `start: 'ready'` starts on Nuxt readiness. `start: 'idle'` schedules another browser idle callback with a two-second timeout after Nuxt readiness. Neither mode runs the analytics client during SSR. For a consent-based start, call `start()` after obtaining consent or use `client.optOutByDefault` and explicitly opt in.
 
+Delaying startup avoids competing with critical rendering but does not remove recorder work after startup. See the [performance guide](https://github.com/stefashkaa/minihog/blob/main/PERFORMANCE.md) for snapshot defaults, worker trade-offs, and interaction measurements.
+
 ```ts
 const analytics = useMiniHog();
 await analytics.start();

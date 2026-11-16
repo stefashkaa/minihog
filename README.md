@@ -9,6 +9,18 @@ The event core imports no external runtime modules. Replay and web-vitals are re
 | [`minihog`](packages/core/README.md)       | Framework-independent TypeScript client                |
 | [`@minihog/nuxt`](packages/nuxt/README.md) | Nuxt 4 module, same-origin proxy, and deferred startup |
 
+## Why MiniHog?
+
+I was using `posthog-js` as usual when Lighthouse flagged several issues: legacy JavaScript, unused recorder code, and a survey renderer loaded even with surveys disabled. I wanted to keep the analytics features I used while shipping less JavaScript and having more control over what reached the browser. That's why I built MiniHog.
+
+MiniHog gives each feature its own ESM entry point so your bundler can remove unused features. Its builds target modern browsers without adding polyfills, and every executable module comes from your application build. You choose which features to enable and when collection starts. The Nuxt module adds a same-origin proxy and manual startup, so analytics can wait until critical UI is ready.
+
+[![Lighthouse before and after: posthog-js has legacy and unused JavaScript findings; MiniHog passes both audits with replay and diagnostics still enabled.](docs/assets/lighthouse-comparison.png)](docs/assets/lighthouse-comparison.png)
+
+The Lighthouse excerpts above show analytics-related legacy and unused JavaScript findings before switching to MiniHog, and zero findings in those two audits afterward. Session replay, console and network diagnostics, and web vitals stayed enabled. Recording still has a runtime cost; these results cover the two audits shown.
+
+See the [reproducible comparison with posthog-js](COMPARISON.md) for bundle sizes, startup CPU, capture timings, and measurement limits. In its full-diagnostics workload, MiniHog's loaded JavaScript measured 37.66 KiB gzipped versus 210.50 KiB for `posthog-js`.
+
 ## Browser
 
 ```sh
@@ -54,8 +66,6 @@ MiniHog supports event batching, identity and group helpers, session persistence
 The API uses explicit imports and camelCase methods. It does not provide the full `posthog-js` method surface, survey rendering, toolbar, product tours, conversations, or advanced replay targeting. The [core guide](packages/core/README.md) documents persistence migration, delivery guarantees, browser requirements, and replay protocol boundaries.
 
 Tree-shaking removes unused features. Enabled replay still requires recorder code and runtime work. Performance depends on the enabled features and the host application; measure the production build with those features active.
-
-See the [reproducible comparison with posthog-js](COMPARISON.md) for bundle sizes, startup CPU, capture timings, and the scope of those measurements.
 
 MiniHog is an independent project and is not affiliated with PostHog.
 

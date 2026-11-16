@@ -1,6 +1,6 @@
 # @minihog/core
 
-A modular TypeScript client for PostHog's browser ingestion APIs. The core has no runtime dependencies. Browser analytics, feature flags, surveys, errors, web vitals, heatmaps, and session replay have separate ESM entry points.
+A modular TypeScript client for PostHog's browser ingestion APIs. The event core imports no external runtime modules. Browser analytics, feature flags, surveys, errors, web vitals, heatmaps, and session replay have separate ESM entry points.
 
 Each feature has an explicit import and startup function. See the entry points below for the supported API.
 
@@ -27,6 +27,27 @@ Use a public project token. A relative host requires a server proxy; direct EU a
 
 The package targets current browsers with ES2022, Web Crypto, Fetch, and native DOM APIs. It ships ESM and TypeScript declarations, with `sideEffects: false`. It adds no polyfills and never downloads executable code from PostHog.
 
+## Client options
+
+| Option                          | Default                            | Purpose                                                    |
+| ------------------------------- | ---------------------------------- | ---------------------------------------------------------- |
+| `apiHost`                       | `https://us.i.posthog.com`         | Ingestion origin or same-origin proxy path                 |
+| `persistence`                   | `localStorage`                     | Use `memory` for ephemeral identity and consent            |
+| `storage`, `persistenceKey`     | Browser storage, `minihog_<token>` | Supply a storage adapter or isolate clients                |
+| `migratePostHog`                | `true`                             | Read standard existing PostHog identity and consent        |
+| `personProfiles`                | `identified_only`                  | Choose `always`, `identified_only`, or `never`             |
+| `optOutByDefault`, `respectDnt` | `false`                            | Start opted out or honor Do Not Track                      |
+| `sessionTimeoutMs`              | `1800000`                          | Idle-session timeout, with a one-minute minimum            |
+| `flushIntervalMs`               | `3000`                             | Time before a queued batch is sent                         |
+| `maxQueueBytes`                 | `2097152`                          | Maximum in-memory queue size; also limited to 1,000 events |
+| `maxRetries`                    | `3`                                | Retry count for transient failures                         |
+| `requestTimeoutMs`              | `10000`                            | Timeout for ingestion, configuration, flags, and surveys   |
+| `fetch`                         | Global Fetch                       | Replace transport, including unload delivery               |
+| `beforeSend`                    | None                               | Return a redacted event or `null` to discard it            |
+| `onError`                       | None                               | Receive delivery and extension errors                      |
+
+Options and events are typed through `MiniHogOptions`, `CaptureOptions`, and `CaptureEvent`. `capture` returns the accepted event or `undefined` when capture is suppressed. `flush` waits for the current delivery attempt; retryable failures remain queued.
+
 ## Entry points
 
 | Import            | Functions                                                          | Included when used                                                                         |
@@ -45,6 +66,8 @@ The package targets current browsers with ES2022, Web Crypto, Fetch, and native 
 | `/remote-config`  | `getRemoteConfig`                                                  | JSON configuration retrieval                                                               |
 
 Nothing imports these extensions from the root entry point. Enabled extensions still have a cost; tree-shaking removes unused imports, not code needed to run a recorder.
+
+`getRemoteConfig(client, assetsHost?)` reads JSON project settings. US and EU Cloud ingestion origins use their matching asset origins automatically. Custom and relative proxy hosts are preserved; self-hosted installations can pass a separate asset origin.
 
 ## Identity and groups
 
@@ -110,11 +133,7 @@ Unknown flags return `undefined`. Flag access records a deduplicated `$feature_f
 
 ## Web vitals and replay
 
-Install the optional peers for the extensions you use:
-
-```sh
-pnpm add web-vitals @rrweb/record @rrweb/rrweb-plugin-console-record
-```
+Replay, console recording, and web-vitals packages are required peers. npm 7+, pnpm with its default peer settings, and Bun install missing peers automatically. Yarn and configurations that disable peer installation may require the application to provide them. Import only the features you use; unused entry points and their peers are removed by tree-shaking.
 
 ```ts
 import { startWebVitals } from '@minihog/core/web-vitals';
@@ -133,12 +152,12 @@ replay.stop();
 
 Only one recorder can run in a document. Inputs are masked by default; `.ph-no-capture`, `.ph-sensitive`, and `[data-private]` elements are blocked. `maskTextSelector` can mask displayed text. Console output can contain application data and needs its own review. The network plugin records timings and URLs, never headers or bodies.
 
-Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2 and removes its compatibility repair for pages with a broken `Array.from`. It verifies the upstream SHA-256 before applying that change. The optional `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
+Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2 and removes its compatibility repair for pages with a broken `Array.from`. It verifies the upstream SHA-256 before applying that change. The `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
 
 Replay uses PostHog's SDK snapshot ingestion format. That protocol has a weaker compatibility guarantee than the documented capture and flags APIs. Advanced remote recording triggers, network payload capture, toolbar integrations, and all `posthog-js` replay controls are not implemented.
 
 ## Contributing
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development setup and checks. The Nuxt companion is [`@minihog/nuxt`](../nuxt/README.md).
+See [CONTRIBUTING.md](https://github.com/stefashkaa/minihog/blob/main/CONTRIBUTING.md) for development setup and checks. The Nuxt companion is [`@minihog/nuxt`](https://github.com/stefashkaa/minihog/tree/main/packages/nuxt#readme).
 
 Protocol references: [capture and batch](https://posthog.com/docs/api/capture), [flags v2](https://posthog.com/docs/api/flags), [sessions](https://posthog.com/docs/data/sessions), [custom surveys](https://posthog.com/docs/surveys/implementing-custom-surveys), [web-vitals](https://github.com/GoogleChrome/web-vitals), [rrweb](https://github.com/rrweb-io/rrweb).

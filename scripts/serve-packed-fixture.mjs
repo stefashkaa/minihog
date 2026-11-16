@@ -35,7 +35,7 @@ try {
   await mkdir('output', { recursive: true });
   for (const name of ['core', 'nuxt'])
     run(['pack', '--out', resolve(`output/minihog-${name}.tgz`)], join(root, 'packages', name));
-  await cp('tests/fixtures/nuxt', temporary, {
+  await cp('packages/nuxt/tests/fixtures/consumer', temporary, {
     recursive: true,
     filter: (path) => !/\/(node_modules|\.nuxt|\.output)(\/|$)/.test(path)
   });
@@ -64,6 +64,7 @@ try {
       {
         standalone: true,
         coreDirectDependency: false,
+        helperDirectDependencies: false,
         typecheck: true,
         disabledFeaturesHaveNoChunks: true,
         build: true

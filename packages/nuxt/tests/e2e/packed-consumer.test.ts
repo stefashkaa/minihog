@@ -1,14 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import type { CaptureEvent } from '@minihog/core';
 
-const remote = JSON.parse(
-  await readFile(new URL('../../packages/nuxt/tests/fixtures/portfolio-config.json', import.meta.url), 'utf8')
-);
+const remote = JSON.parse(await readFile(new URL('../fixtures/recording-enabled.json', import.meta.url), 'utf8'));
 
-async function intercept(page, config = remote) {
-  const events = [];
-  const requests = [];
-  const scripts = [];
+async function intercept(page: Page, config: Record<string, unknown> = remote) {
+  const events: CaptureEvent[] = [];
+  const requests: string[] = [];
+  const scripts: string[] = [];
   page.on('request', (request) => {
     if (request.resourceType() === 'script') scripts.push(request.url());
   });
@@ -16,18 +15,18 @@ async function intercept(page, config = remote) {
     const request = route.request();
     requests.push(request.url());
     if (request.method() === 'POST') {
-      const payload = request.postDataJSON();
+      const payload = request.postDataJSON() as CaptureEvent[] | { batch?: CaptureEvent[] };
       events.push(...(Array.isArray(payload) ? payload : (payload.batch ?? [])));
     }
     await route.fulfill({ json: request.url().includes('/config') ? config : { status: 1 } });
   });
   return { events, requests, scripts };
 }
-async function open(page, url = '/') {
+async function open(page: Page, url = '/') {
   await page.goto(url);
   await expect(page.locator('main')).toHaveAttribute('data-hydrated', 'true');
 }
-const snapshots = (events) =>
+const snapshots = (events: CaptureEvent[]) =>
   events.filter((event) => event.event === '$snapshot').flatMap((event) => event.properties.$snapshot_data);
 
 test('packed module preserves delayed startup, SPA events, masked replay and diagnostics', async ({ page }) => {

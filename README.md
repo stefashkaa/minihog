@@ -2,7 +2,7 @@
 
 Modular PostHog analytics for modern browsers. Import the features you use: events, pageviews, autocapture, heatmaps, feature flags, surveys, errors, web vitals, or session replay.
 
-The core has no runtime dependencies. Optional features use separate ESM entry points and support tree-shaking. MiniHog adds no polyfills and never downloads executable code from PostHog.
+The event core imports no external runtime modules. Replay and web-vitals are required peers that npm 7+, pnpm's default settings, and Bun install automatically. They enter your browser bundle only when used. Optional features use separate ESM entry points and support tree-shaking. MiniHog adds no polyfills and never downloads executable code from PostHog.
 
 | Package                                    | Purpose                                                |
 | ------------------------------------------ | ------------------------------------------------------ |
@@ -55,6 +55,8 @@ The API uses explicit imports and camelCase methods. It does not provide the ful
 
 Tree-shaking removes unused features. Enabled replay still requires recorder code and runtime work. Performance depends on the enabled features and the host application; measure the production build with those features active.
 
+See the [reproducible comparison with posthog-js](COMPARISON.md) for bundle sizes, startup CPU, capture timings, and the scope of those measurements.
+
 MiniHog is an independent project and is not affiliated with PostHog.
 
 ## Development
@@ -74,4 +76,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [dem
 
 ## License
 
-The packages are MIT licensed. See [third-party notices](THIRD_PARTY_NOTICES.md) for the rrweb recorder and the demo's Vue Bits background.
+The packages and demo are MIT licensed. See [third-party notices](THIRD_PARTY_NOTICES.md) for the bundled rrweb recorder.

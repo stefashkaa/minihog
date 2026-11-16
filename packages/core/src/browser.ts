@@ -79,7 +79,7 @@ function elements(target: Element, captureText: boolean): Properties[] {
     if (
       captureText &&
       /^(a|button|label|span)$/.test(tag) &&
-      !element.querySelector('input,textarea,[contenteditable]')
+      !element.querySelector(`input,textarea,[contenteditable],${privateSelector}`)
     ) {
       const text = element.textContent?.trim().slice(0, 255);
       // Keep obvious email addresses and long numeric identifiers out of autocapture.
@@ -174,6 +174,8 @@ export function startBrowserCapture(client: MiniHog, options: BrowserOptions = {
     if (disposed || client.hasOptedOut() || options.pageviews === false || (page?.url === location.href && !left))
       return;
     client.touchSession();
+    // Session rotation can synchronously create this pageview through the listener below.
+    if (page?.url === location.href && !left) return;
     const previous = previousPage();
     page = { url: location.href, pathname: location.pathname, id: uuid(), started: Date.now() };
     maxScroll = maxContent = maxHeight = 0;
@@ -267,6 +269,7 @@ export function startBrowserCapture(client: MiniHog, options: BrowserOptions = {
         client.unregister(`$session_entry_${name}`);
       page = undefined;
       attribution();
+      pageview();
     })
   );
   attribution();

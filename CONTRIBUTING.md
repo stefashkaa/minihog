@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node.js 24.15 or newer supported by `package.json`, and pnpm 12.18.0. Install dependencies with `pnpm install`; CI uses the frozen lockfile.
+Use Node.js 26.x and pnpm 12.18.0. Install dependencies with `pnpm install`; CI uses the frozen lockfile.
 
 ## Checks
 
@@ -14,6 +14,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 pnpm size
 pnpm publish:check
+pnpm check:install
 pnpm check:peers
 pnpm audit:prod
 ```
@@ -22,7 +23,13 @@ pnpm audit:prod
 
 Vitest tests import source files. Coverage includes every runtime source file and requires at least 95% statements, branches, functions, and lines in each package. Use behavior assertions for wire formats, consent, retries, identity, browser listeners, and teardown. Keep real browser tests for DOM recording and Nuxt integration.
 
-Playwright builds npm archives, installs them into an isolated Nuxt consumer with no direct core dependency, checks types, and builds with optional features both disabled and enabled. It verifies that disabled features produce no chunks, then exercises the built application. All analytics traffic is intercepted locally with a synthetic public token.
+Playwright builds npm archives, installs them into an isolated Nuxt consumer with no direct core, rrweb, console-plugin, or web-vitals dependency, checks types, and builds with optional features both disabled and enabled. It verifies that disabled features produce no chunks, then exercises the built application. Tests live in `packages/nuxt/tests/e2e/packed-consumer.test.ts` and fixtures in `packages/nuxt/tests/fixtures/consumer`. All analytics traffic is intercepted locally with a synthetic public token.
+
+Quality checks run on pushes to `main`. To check a pull request before merging, dispatch the Quality and coverage workflow with `pr_number`, or supply `ref` for a branch, tag, or commit. Manual runs do not publish packages.
+
+`pnpm check:install` installs the core archive into a clean npm consumer and imports every entry point during SSR. Required peers must resolve without direct helper dependencies. The Nuxt browser fixture checks the same installation boundary with pnpm.
+
+`pnpm benchmark` compares the built client with the pinned PostHog SDK in fresh Chromium contexts. The SDK is a development dependency used only for comparison and never enters package artifacts or the demo. Raw measurements go to `output/comparison.json`; `pnpm comparison:update` also refreshes `COMPARISON.md`. The Browser comparison workflow runs the same benchmark manually and places its report in the job summary. Timing results are evidence, not noisy CI pass/fail thresholds.
 
 ## Package boundaries
 

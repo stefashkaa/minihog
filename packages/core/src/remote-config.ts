@@ -24,9 +24,12 @@ export interface RemoteConfig {
 }
 
 /** Reads data only. Unlike posthog-js, this never executes remote configuration scripts. */
-export async function getRemoteConfig(client: MiniHog): Promise<RemoteConfig | undefined> {
+export async function getRemoteConfig(client: MiniHog, assetsHost?: string): Promise<RemoteConfig | undefined> {
   if (client.hasOptedOut()) return;
   const current = context(client);
+  const host = (
+    assetsHost ?? client.apiHost.replace(/^https:\/\/(us|eu)\.i\.posthog\.com$/, 'https://$1-assets.i.posthog.com')
+  ).replace(/\/+$/, '');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), current.options.requestTimeoutMs ?? 10000);
   const unsubscribe = client.onConsentChange((enabled) => {
@@ -34,7 +37,7 @@ export async function getRemoteConfig(client: MiniHog): Promise<RemoteConfig | u
   });
   try {
     const response = await (current.options.fetch ?? fetch)(
-      `${client.apiHost}/array/${encodeURIComponent(client.token)}/config`,
+      `${host}/array/${encodeURIComponent(client.token)}/config`,
       {
         credentials: 'omit',
         signal: controller.signal

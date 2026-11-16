@@ -16,7 +16,7 @@ const features = [
   {
     number: '01',
     title: 'Start small.',
-    text: 'Events, identity, sessions, and consent. The core has no runtime dependencies.',
+    text: 'Events, identity, sessions, and consent. The event core imports no external runtime modules.',
     tag: '@minihog/core'
   },
   {
@@ -68,7 +68,8 @@ const features = [
       </div>
     </section>
     <div class="facts container">
-      <span><strong>0</strong> core runtime dependencies</span><span><strong>12</strong> independent entry points</span
+      <span><strong>0</strong> external imports in the event core</span
+      ><span><strong>12</strong> independent entry points</span
       ><span><strong>ES2022</strong> without added polyfills</span
       ><span><strong>MIT</strong> open-source packages</span>
     </div>

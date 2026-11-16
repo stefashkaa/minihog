@@ -92,27 +92,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "peerDependencies": {
-    "@rrweb/record": "^2.2.2",
-    "@rrweb/rrweb-plugin-console-record": "^2.2.2",
-    "web-vitals": "^6.2.1"
-  },
-  "peerDependenciesMeta": {
-    "@rrweb/record": {
-      "optional": true
-    },
-    "@rrweb/rrweb-plugin-console-record": {
-      "optional": true
-    },
-    "web-vitals": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@rrweb/record": "2.2.2",
-    "@rrweb/rrweb-plugin-console-record": "2.2.2",
-    "web-vitals": "6.2.3"
-  },
   "author": "Stefan Popov <hello@stefanpopov.dev>",
   "repository": {
     "type": "git",
@@ -134,5 +113,15 @@
     "web-vitals"
   ],
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts"
+  "types": "./dist/index.d.ts",
+  "peerDependencies": {
+    "@rrweb/record": "^2.2.2",
+    "@rrweb/rrweb-plugin-console-record": "^2.2.2",
+    "web-vitals": "^6.2.3"
+  },
+  "devDependencies": {
+    "@rrweb/record": "2.2.2",
+    "@rrweb/rrweb-plugin-console-record": "2.2.2",
+    "web-vitals": "6.2.3"
+  }
 }

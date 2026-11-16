@@ -1,6 +1,6 @@
 # Maintainer release procedure
 
-Both packages share a version through the fixed Changesets group. The root workspace and Nuxt example are private.
+Both packages share a version through the fixed Changesets group. The root workspace and demo application are private.
 
 1. Add a Changeset describing the public change: `pnpm changeset`.
 2. Apply versions and changelogs: `pnpm changeset:version`.

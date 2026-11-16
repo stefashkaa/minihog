@@ -9,10 +9,7 @@
   },
   "dependencies": {
     "@minihog/nuxt": "workspace:^",
-    "@rrweb/record": "2.2.2",
-    "@rrweb/rrweb-plugin-console-record": "2.2.2",
     "vue": "3.5.45",
-    "web-vitals": "6.2.3",
     "@minihog/core": "workspace:^",
     "ogl": "^1.0.11"
   },

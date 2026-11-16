@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { build } from 'esbuild';
 
@@ -45,9 +45,16 @@ async function bundle(contents) {
 }
 
 const report = {};
+let coreInputs;
+const contributingInputs = (result) =>
+  Object.entries(Object.values(result.metafile.outputs)[0].inputs)
+    .filter(([path, input]) => path !== '<stdin>' && input.bytesInOutput > 0)
+    .map(([path]) => path)
+    .sort();
 for (const [name, fixture] of Object.entries(fixtures)) {
   const result = await bundle(fixture.source);
   const code = result.outputFiles[0].contents;
+  if (name === 'core') coreInputs = contributingInputs(result);
   const gzip = gzipSync(code).length;
   const inputs = Object.keys(result.metafile.inputs);
   assert.ok(gzip <= fixture.budget, `${name}: ${gzip} gzip bytes exceeds budget ${fixture.budget}`);
@@ -59,13 +66,16 @@ for (const [name, fixture] of Object.entries(fixtures)) {
     assert.ok(inputs.every((path) => !/rrweb|web-vitals|surveys|flags\.js/.test(path)));
   report[name] = { minifiedBytes: code.length, gzipBytes: gzip, budgetBytes: fixture.budget };
 }
+const metadata = JSON.parse(await readFile(new URL('../packages/core/package.json', import.meta.url), 'utf8'));
+assert.equal(metadata.sideEffects, false);
+const extensions = Object.keys(metadata.exports).filter((path) => path.startsWith('./') && path !== './package.json');
 const unused = await bundle(
-  `${fixtures.core.source}\nimport { createFeatureFlags } from '@minihog/core/flags';\nimport { getSurveys } from '@minihog/core/surveys';\nimport { captureException } from '@minihog/core/errors';\nimport { startSessionReplay } from '@minihog/core/replay';\nimport { startWebVitals } from '@minihog/core/web-vitals';\nimport { startHeatmaps } from '@minihog/core/heatmaps';`
+  `${fixtures.core.source}\n${extensions.map((entry, index) => `import * as unused${index} from '@minihog/core/${entry.slice(2)}';`).join('\n')}`
 );
-assert.equal(
-  unused.outputFiles[0].contents.length,
-  report.core.minifiedBytes,
-  'Unused optional imports must be eliminated completely'
+assert.deepEqual(
+  contributingInputs(unused),
+  coreInputs,
+  'Unused optional entry points and peers must contribute no output'
 );
 await mkdir('output', { recursive: true });
 await writeFile('output/bundle-sizes.json', `${JSON.stringify(report, null, 2)}\n`);

@@ -2,10 +2,18 @@ packages:
   - packages/*
   - demo
 
+autoInstallPeers: true
+strictPeerDependencies: true
+
 overrides:
   glob: ^14.0.6
 
 allowBuilds:
+  core-js: false
   esbuild: true
   sharp: true
   vue-demi: true
+minimumReleaseAgeExclude:
+  - '@posthog/browser-common@0.12.0'
+  - '@posthog/core@1.68.0'
+  - posthog-js@1.450.0

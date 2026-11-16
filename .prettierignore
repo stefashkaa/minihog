@@ -3,6 +3,7 @@ dist
 .nuxt
 .output
 .cache
+.playwright-cli
 coverage
 output
 playwright-report

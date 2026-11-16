@@ -126,6 +126,56 @@ test('autocapture records selectors and safe text, suppresses private content an
   expect(events.filter((e) => e.event === '$autocapture')).toHaveLength(before);
 });
 
+test.each(['class="ph-sensitive"', 'class="ph-no-capture"', 'class="nocapture"', 'data-private', 'data-ph-no-capture'])(
+  'autocapture never includes private descendant text: %s',
+  (attribute, t) => {
+    document.body.innerHTML = `<button><span id="public">Continue</span><span ${attribute}>Secret diagnosis</span></button>`;
+    const { client, events } = fixture(t);
+    startBrowserCapture(client);
+    click(document.querySelector('#public'));
+    const captured = events.find((event) => event.event === '$autocapture');
+    expect(captured.properties.$elements[0].$el_text).toBe('Continue');
+    expect(JSON.stringify(captured)).not.toContain('Secret diagnosis');
+  }
+);
+
+test.each(['click', 'capture'])('idle session rollover establishes a pageview before %s', (interaction, t) => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1000000);
+  document.body.innerHTML = '<button>Continue</button>';
+  const { client, events } = fixture(t);
+  startBrowserCapture(client);
+  const first = events[0];
+  now.mockReturnValue(4000000);
+  if (interaction === 'click') click(document.querySelector('button'));
+  else client.capture('resumed');
+  const views = events.filter((event) => event.event === '$pageview');
+  expect(views).toHaveLength(2);
+  const resumed = views[1];
+  expect(resumed.properties.$session_id).not.toBe(first.properties.$session_id);
+  expect(resumed.properties.$pageview_id).not.toBe(first.properties.$pageview_id);
+  expect(resumed.properties.$prev_pageview_id).toBeUndefined();
+  expect(events.at(-1).properties.$pageview_id).toBe(resumed.properties.$pageview_id);
+  window.dispatchEvent(new Event('pagehide'));
+  const leave = events.at(-1);
+  expect(leave.event).toBe('$pageleave');
+  expect(leave.properties.$prev_pageview_id).toBe(resumed.properties.$pageview_id);
+  expect(leave.properties.$prev_pageview_duration).toBe(0);
+});
+
+test('session rollover during navigation creates exactly one new pageview', async (t) => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1000000);
+  const { client, events } = fixture(t);
+  startBrowserCapture(client);
+  now.mockReturnValue(4000000);
+  history.pushState({}, '', '/resumed');
+  history.replaceState({}, '', '/resumed');
+  await tick();
+  const views = events.filter((event) => event.event === '$pageview');
+  expect(views).toHaveLength(2);
+  expect(views[1].properties.$pathname).toBe('/resumed');
+  expect(views[1].properties.$prev_pageview_id).toBeUndefined();
+});
+
 test('rage clicks require nearby clicks without selection and respect disabled options', (t) => {
   document.body.innerHTML = '<button>Save</button><input><span role="spinbutton">+</span>';
   const { client, events } = fixture(t);

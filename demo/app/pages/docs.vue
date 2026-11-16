@@ -208,13 +208,10 @@ const payload = flags.getFeatureFlagPayload('new-checkout');`;
       <section id="replay">
         <h2>Replay & web vitals</h2>
         <p>
-          Install the optional peers for the extensions you use. The recorder is bundled; its peer supplies plugin
-          types.
+          Dependencies install automatically with MiniHog. Import the extensions you use; unused features stay out of
+          your browser bundle.
         </p>
-        <CodeBlock
-          code="pnpm add web-vitals @rrweb/record @rrweb/rrweb-plugin-console-record"
-          label="Terminal"
-        /><CodeBlock :code="replay" />
+        <CodeBlock :code="replay" />
         <p>
           Inputs are masked by default. Block content with <code>.ph-no-capture</code>, <code>.ph-sensitive</code>, or
           <code>[data-private]</code>. Console output may contain application data. Network diagnostics capture URLs and

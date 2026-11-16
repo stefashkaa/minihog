@@ -24,6 +24,23 @@ Set `NUXT_PUBLIC_MINIHOG_KEY` to the public project token at runtime. `key` in t
 
 The default host is US Cloud. EU Cloud automatically uses `eu-assets.i.posthog.com` for JSON configuration. Self-hosted installations can specify `assetsHost` separately. Host values must be HTTP(S) origins; the proxy does not accept a target supplied by a request.
 
+## Module options
+
+| Option                              | Default                                       | Purpose                                                                                 |
+| ----------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `key`                               | Empty                                         | Public project token, overridable with `NUXT_PUBLIC_MINIHOG_KEY`                        |
+| `host`                              | `https://us.i.posthog.com`                    | Ingestion origin                                                                        |
+| `assetsHost`                        | Matching Cloud asset origin, otherwise `host` | JSON project configuration                                                              |
+| `proxyPath`                         | `/api/_ph`                                    | Local server route prefix                                                               |
+| `start`                             | `ready`                                       | Choose `ready`, `idle`, or `manual`                                                     |
+| `browser`                           | `{}`                                          | Pageviews, autocapture, rage clicks, and text capture; `false` disables browser capture |
+| `webVitals`, `heatmaps`, `replay`   | `false`                                       | Enable independent feature imports                                                      |
+| `consoleRecording`, `networkTiming` | `false`                                       | Add diagnostics to enabled replay                                                       |
+| `errorCapture`                      | `false`                                       | Capture browser errors and unhandled rejections                                         |
+| `client`                            | `{}`                                          | Serializable persistence, consent, profile, session-timeout, and flush options          |
+
+The module exports `ModuleOptions` and `MiniHogController` types. Callback functions and custom storage/transports belong in a direct core integration rather than serializable Nuxt runtime configuration.
+
 ## Delay initialization
 
 Set `start: 'manual'` to keep the analytics implementation unloaded until the application calls `start()`:
@@ -67,9 +84,7 @@ Concurrent starts share one promise. Stop cancels a pending initialization, clea
 
 ## Optional features
 
-```sh
-pnpm add web-vitals @rrweb/record @rrweb/rrweb-plugin-console-record
-```
+With npm 7+, pnpm's default settings, or Bun, required replay and web-vitals peers install automatically. Yarn and configurations that disable peer installation may require the application to provide the peers listed by `@minihog/core`. Enable features through module options; unused features produce no client chunks.
 
 ```ts
 export default defineNuxtConfig({
@@ -108,4 +123,4 @@ The proxy requires a Node-based Nitro server or serverless deployment. A static-
 
 ## Contributing
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development setup and tests. A complete example is in [`demo`](../../demo).
+See [CONTRIBUTING.md](https://github.com/stefashkaa/minihog/blob/main/CONTRIBUTING.md) for development setup and tests. A complete example is in [`demo`](https://github.com/stefashkaa/minihog/tree/main/demo).

@@ -29,7 +29,7 @@ test('remote config uses encoded public token, omits credentials and reports HTT
     .mockResolvedValueOnce(new Response('', { status: 503 }));
   vi.stubGlobal('fetch', fetch);
   expect(await getRemoteConfig(client)).toEqual({ surveys: false });
-  expect(fetch.mock.calls[0][0]).toBe('https://us.i.posthog.com/array/test/config');
+  expect(fetch.mock.calls[0][0]).toBe('https://us-assets.i.posthog.com/array/test/config');
   expect(fetch.mock.calls[0][1].credentials).toBe('omit');
   expect(await getRemoteConfig(client)).toBeUndefined();
   expect(errors[0].message).toContain('503');
@@ -62,6 +62,18 @@ test('config requests abort on timeout or consent revocation and discard late re
   expect(signal.aborted).toBe(true);
   resolve(Response.json({}));
   await second;
+});
+
+test.each([
+  ['https://eu.i.posthog.com', undefined, 'https://eu-assets.i.posthog.com'],
+  ['/api/_ph', undefined, '/api/_ph'],
+  ['https://analytics.example', undefined, 'https://analytics.example'],
+  ['https://analytics.example', 'https://assets.example/', 'https://assets.example']
+])('remote config resolves the correct asset host for %s', async (apiHost, assetsHost, expected, t) => {
+  const fetch = vi.fn().mockResolvedValue(Response.json({ surveys: false }));
+  const { client } = fixture(t, { apiHost, fetch });
+  await getRemoteConfig(client, assetsHost);
+  expect(fetch.mock.calls[0][0]).toBe(`${expected}/array/test/config`);
 });
 
 test('headless surveys handle consent, missing data, HTTP errors and supplied responses', async (t) => {

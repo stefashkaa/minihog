@@ -15,6 +15,7 @@ export default [
       '**/.output/**',
       '**/coverage/**',
       'output/**',
+      '.playwright-cli/**',
       'test-results/**',
       'playwright-report/**',
       'pnpm-lock.yaml'

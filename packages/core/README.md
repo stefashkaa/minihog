@@ -2,8 +2,6 @@
 
 A modular TypeScript client for PostHog's browser ingestion APIs. The event core imports no external runtime modules. Browser analytics, feature flags, surveys, errors, web vitals, heatmaps, and session replay have separate ESM entry points.
 
-Each feature has an explicit import and startup function. See the entry points below for the supported API.
-
 ## Install and capture
 
 ```sh
@@ -25,7 +23,7 @@ analytics.capture('project_opened', { slug: 'example' });
 
 Use a public project token. A relative host requires a server proxy; direct EU and US ingestion origins also work. Imports and construction do not send requests. Browser capture starts when its function is called.
 
-The package targets current browsers with ES2022, Web Crypto, Fetch, and native DOM APIs. It ships ESM and TypeScript declarations, with `sideEffects: false`. It adds no polyfills and never downloads executable code from PostHog.
+The package ships ESM and TypeScript declarations. It declares `@rrweb/record`, `@rrweb/rrweb-plugin-console-record`, and `web-vitals` as required peers. If your package manager does not install peers automatically, add them explicitly. Only imported features enter your browser bundle.
 
 ## Client options
 
@@ -60,12 +58,10 @@ Options and events are typed through `MiniHogOptions`, `CaptureOptions`, and `Ca
 | `/errors`         | `captureException`, `startErrorCapture`                            | Manual errors and browser error listeners                                                  |
 | `/heatmaps`       | `startHeatmaps`                                                    | Click/movement points, rage clicks, dead clicks                                            |
 | `/web-vitals`     | `startWebVitals`                                                   | Google's CLS/FCP/INP/LCP algorithms and INP/LCP attribution                                |
-| `/replay`         | `startSessionReplay`                                               | A pinned modern rrweb recorder and snapshot transport                                      |
+| `/replay`         | `startSessionReplay`                                               | DOM recordings with rrweb                                                                  |
 | `/replay-console` | `consoleRecordingPlugin`                                           | rrweb console serialization                                                                |
 | `/replay-network` | `networkTimingPlugin`                                              | Resource/navigation timing observations                                                    |
 | `/remote-config`  | `getRemoteConfig`                                                  | JSON configuration retrieval                                                               |
-
-Nothing imports these extensions from the root entry point. Enabled extensions still have a cost; tree-shaking removes unused imports, not code needed to run a recorder.
 
 `getRemoteConfig(client, assetsHost?)` reads JSON project settings. US and EU Cloud ingestion origins use their matching asset origins automatically. Custom and relative proxy hosts are preserved; self-hosted installations can pass a separate asset origin.
 
@@ -105,13 +101,13 @@ await analytics.destroy();
 
 Opt-out suppresses capture and clears queued events and durable MiniHog identity. Extensions check consent; replay stops recording. Opt-out changes propagate between tabs. An already delivered request cannot be recalled.
 
-Events are serialized when captured, then batched every three seconds. The queue defaults to 2 MiB and 1,000 events. Failed network requests, HTTP 408, 429, and 5xx responses get at most three retries; other HTTP errors are dropped. Request IDs remain unchanged across retries. Queue overflow drops the oldest event and calls `onError` when supplied.
+Events are serialized when captured and sent in batches. Failed network requests, HTTP 408, 429, and 5xx responses are retried up to `maxRetries`; other HTTP errors are dropped. Request IDs remain unchanged across retries. Queue overflow drops the oldest event and calls `onError` when supplied.
 
 `visibilitychange` and `pagehide` flush pending events. Small requests use `sendBeacon`; other requests use Fetch. When a custom `fetch` is supplied, all delivery uses that function, including unload flushes. Delivery during tab/process termination remains best effort, especially for a full replay snapshot larger than the browser's keepalive limit. The queue is in memory, so it does not provide durable offline delivery.
 
 Sessions expire after 30 minutes without activity and rotate after 24 hours. Replay and web-vitals events are passive and do not extend an idle session. `getSessionId()` reads the session; `touchSession()` marks user activity.
 
-`register`, `registerOnce`, `unregister`, and `getProperty` manage super properties. `beforeSend` can redact or drop events. `onError` receives delivery errors. `destroy()` removes listeners, stops replay, flushes pending events, and releases timers. Google's web-vitals observers have no unsubscribe API; their callbacks become inert after teardown.
+`register`, `registerOnce`, `unregister`, and `getProperty` manage super properties. `destroy()` removes listeners, stops replay, flushes pending events, and releases timers. Google's web-vitals observers have no unsubscribe API; their callbacks become inert after teardown.
 
 ## Feature flags and experiments
 
@@ -133,8 +129,6 @@ Unknown flags return `undefined`. Flag access records a deduplicated `$feature_f
 
 ## Web vitals and replay
 
-Replay, console recording, and web-vitals packages are required peers. npm 7+, pnpm with its default peer settings, and Bun install missing peers automatically. Yarn and configurations that disable peer installation may require the application to provide them. Import only the features you use; unused entry points and their peers are removed by tree-shaking.
-
 ```ts
 import { startWebVitals } from 'minihog/web-vitals';
 import { startSessionReplay } from 'minihog/replay';
@@ -152,13 +146,9 @@ replay.stop();
 
 Only one recorder can run in a document. Inputs are masked by default; `.ph-no-capture`, `.ph-sensitive`, and `[data-private]` elements are blocked. `maskTextSelector` can mask displayed text. Console output can contain application data and needs its own review. The network plugin records timings and URLs, never headers or bodies.
 
-Replay supports per-session sampling, a minimum duration, and idle suspension. The build bundles rrweb 2.2.2, removes its compatibility repair for pages with a broken `Array.from`, and corrects its native DOM method checks to avoid an unnecessary startup iframe. Patched DOM APIs retain the clean-realm fallback. The build verifies the upstream SHA-256 before applying these changes. The `@rrweb/record` peer supplies public plugin types; its unmodified runtime is not loaded. The bundled recorder retains rrweb's MIT license in `LICENSE-RRWEB`.
+Snapshots omit scripts, script preload links, comments, and whitespace inside `<head>` by default, while retaining styles and visible content. Pass `slimDOMOptions: {}` to retain those nodes. Use recorder masking options for DOM privacy rules; `beforeSend` can also redact, replace, or drop replay events.
 
-Snapshots omit scripts, script preload links, comments, and whitespace inside `<head>` by default, while retaining styles and visible content. Pass `slimDOMOptions: {}` to retain those nodes. Replay batches reuse serialized JSON and UTF-8 byte counts; `beforeSend` still receives ordinary event objects and can redact, replace, or drop them. Keep that hook lightweight and use recorder masking options for DOM privacy rules.
-
-Canvas pixels are excluded by default; set `recordCanvas: true` when they are needed. Full DOM snapshots run synchronously, so larger documents and frequent mutations cost more to record. Sampling reduces the number of recorded sessions; a minimum duration reduces uploads but still records events while waiting.
-
-Replay uses PostHog's SDK snapshot ingestion format. That protocol has a weaker compatibility guarantee than the documented capture and flags APIs. Advanced remote recording triggers, network payload capture, toolbar integrations, and all `posthog-js` replay controls are not implemented.
+Canvas pixels are excluded by default; set `recordCanvas: true` when they are needed. Full DOM snapshots run synchronously, so larger documents and frequent mutations cost more to record. Replay supports per-session sampling, minimum duration, and idle suspension. Sampling reduces recorded sessions; a minimum duration reduces uploads but still records events while waiting.
 
 ### Delay loading replay
 
@@ -179,6 +169,12 @@ async function startReplay(analytics: import('minihog').MiniHog) {
 ```
 
 Call `await startReplay(analytics)` once the application is ready and any required consent is granted. Replay starts at that point; earlier interactions are not recorded. Keep the returned controller and call `stop()` when recording is no longer needed. Nuxt applications can use the module's [manual startup](https://github.com/stefashkaa/minihog/tree/main/packages/nuxt#delay-initialization).
+
+## Compatibility
+
+MiniHog requires ES2022, Web Crypto, Fetch, and native DOM APIs. It adds no polyfills or remotely downloaded scripts. Its API uses separate imports and camelCase methods. Automatic survey rendering, product tours, conversations, the toolbar, and advanced remote recording triggers are not supported.
+
+Replay uses PostHog's SDK snapshot ingestion format, which has a weaker compatibility guarantee than the documented capture and flags APIs. MiniHog supports DOM recording and console/network-timing diagnostics; it does not capture network payloads or implement every `posthog-js` replay control.
 
 ## Contributing
 

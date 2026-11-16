@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.nuxt/
+.output/
+.cache/
+.playwright-cli/
+coverage/
+output/
+playwright-report/
+test-results/
+*.tgz
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store

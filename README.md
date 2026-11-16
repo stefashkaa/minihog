@@ -6,18 +6,18 @@ The event core imports no external runtime modules. Replay and web-vitals are re
 
 | Package                                    | Purpose                                                |
 | ------------------------------------------ | ------------------------------------------------------ |
-| [`@minihog/core`](packages/core/README.md) | Framework-independent TypeScript client                |
+| [`minihog`](packages/core/README.md)       | Framework-independent TypeScript client                |
 | [`@minihog/nuxt`](packages/nuxt/README.md) | Nuxt 4 module, same-origin proxy, and deferred startup |
 
 ## Browser
 
 ```sh
-pnpm add @minihog/core
+pnpm add minihog
 ```
 
 ```ts
-import { createMiniHog } from '@minihog/core';
-import { startBrowserCapture } from '@minihog/core/browser';
+import { createMiniHog } from 'minihog';
+import { startBrowserCapture } from 'minihog/browser';
 
 const analytics = createMiniHog('phc_public_project_token', {
   apiHost: 'https://eu.i.posthog.com'

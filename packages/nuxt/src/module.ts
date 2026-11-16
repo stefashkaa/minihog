@@ -83,7 +83,7 @@ export default defineNuxtModule<ModuleOptions>({
       'errors',
       ''
     ]) {
-      const specifier = `@minihog/core${entry ? `/${entry}` : ''}`;
+      const specifier = `minihog${entry ? `/${entry}` : ''}`;
       nuxt.options.alias[specifier] = fileURLToPath(import.meta.resolve(specifier));
     }
     addPlugin({ src: resolver.resolve('./runtime/plugin.js'), order: -20 });

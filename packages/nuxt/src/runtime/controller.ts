@@ -1,4 +1,4 @@
-import type { MiniHog } from '@minihog/core';
+import type { MiniHog } from 'minihog';
 import type { MiniHogController, PublicOptions } from '../types.js';
 
 type Initialize = (config: PublicOptions, isActive: () => boolean) => Promise<MiniHog>;

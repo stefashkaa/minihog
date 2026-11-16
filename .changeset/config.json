@@ -7,7 +7,7 @@
     }
   ],
   "commit": false,
-  "fixed": [["@minihog/core", "@minihog/nuxt"]],
+  "fixed": [["minihog", "@minihog/nuxt"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",

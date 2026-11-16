@@ -1,6 +1,6 @@
 # @minihog/nuxt
 
-Nuxt 4 integration for `@minihog/core`. It installs a typed controller, a `useMiniHog()` composable, and an allowlisted same-origin proxy. Feature imports are generated at build time, so disabled features produce no chunks. Enabled replay and web-vitals chunks load only when remote settings allow them.
+Nuxt 4 integration for `minihog`. It installs a typed controller, a `useMiniHog()` composable, and an allowlisted same-origin proxy. Feature imports are generated at build time, so disabled features produce no chunks. Enabled replay and web-vitals chunks load only when remote settings allow them.
 
 ## Install
 
@@ -84,7 +84,7 @@ Concurrent starts share one promise. Stop cancels a pending initialization, clea
 
 ## Optional features
 
-With npm 7+, pnpm's default settings, or Bun, required replay and web-vitals peers install automatically. Yarn and configurations that disable peer installation may require the application to provide the peers listed by `@minihog/core`. Enable features through module options; unused features produce no client chunks.
+With npm 7+, pnpm's default settings, or Bun, required replay and web-vitals peers install automatically. Yarn and configurations that disable peer installation may require the application to provide the peers listed by `minihog`. Enable features through module options; unused features produce no client chunks.
 
 ```ts
 export default defineNuxtConfig({
@@ -101,7 +101,7 @@ export default defineNuxtConfig({
 });
 ```
 
-All options in this example except browser capture default to `false`. `browser: false` disables pageviews and DOM capture. For feature flags, identity helpers, or headless surveys, add `@minihog/core` as a direct dependency and import the corresponding entry point.
+All options in this example except browser capture default to `false`. `browser: false` disables pageviews and DOM capture. For feature flags, identity helpers, or headless surveys, add `minihog` as a direct dependency and import the corresponding entry point.
 
 Local feature selection limits what remote settings can enable. Remote configuration cannot download extra scripts. Unknown replay targeting/payload rules and enforced heatmap URL rules stop those features and produce a warning; they never broaden collection silently.
 

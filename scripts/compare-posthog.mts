@@ -21,15 +21,15 @@ for (const mode of modes) {
   const browser = !mode.startsWith('events');
   const diagnostics = mode === 'diagnostics';
   const minihog = `
-    import { createMiniHog } from '@minihog/core';
-    ${browser ? "import { startBrowserCapture } from '@minihog/core/browser';" : ''}
+    import { createMiniHog } from 'minihog';
+    ${browser ? "import { startBrowserCapture } from 'minihog/browser';" : ''}
     ${
       diagnostics
-        ? `import { startSessionReplay } from '@minihog/core/replay';
-      import { startHeatmaps } from '@minihog/core/heatmaps';
-      import { startWebVitals } from '@minihog/core/web-vitals';
-      import { consoleRecordingPlugin } from '@minihog/core/replay-console';
-      import { networkTimingPlugin } from '@minihog/core/replay-network';`
+        ? `import { startSessionReplay } from 'minihog/replay';
+      import { startHeatmaps } from 'minihog/heatmaps';
+      import { startWebVitals } from 'minihog/web-vitals';
+      import { consoleRecordingPlugin } from 'minihog/replay-console';
+      import { networkTimingPlugin } from 'minihog/replay-network';`
         : ''
     }
     window.acceptedBenchmarkEvents = 0;

@@ -48,9 +48,9 @@ test.each([
   expect(kit.addImports.mock.calls[0]![0].name).toBe('useMiniHog');
   expect(kit.addServerHandler.mock.calls[0]![0].route).toBe('/api/_ph/**');
   expect(kit.addTemplate.mock.calls[0]![0].getContents()).toContain('createMiniHog');
-  expect(app.options.alias['@minihog/core/replay']).toMatch(/\/dist\/replay\.js$/);
-  expect(app.options.alias['@minihog/core/identity']).toMatch(/\/dist\/identity\.js$/);
-  expect(app.options.alias['@minihog/core/flags']).toMatch(/\/dist\/flags\.js$/);
+  expect(app.options.alias['minihog/replay']).toMatch(/\/dist\/replay\.js$/);
+  expect(app.options.alias['minihog/identity']).toMatch(/\/dist\/identity\.js$/);
+  expect(app.options.alias['minihog/flags']).toMatch(/\/dist\/flags\.js$/);
   const manifest = {
     'minihog.js': { prefetch: true },
     'rrweb.js': {},
@@ -93,7 +93,7 @@ test('template includes exactly the enabled features and gates remote restrictio
     networkTiming: true
   });
   for (const feature of ['browser', 'web-vitals', 'heatmaps', 'replay', 'replay-console', 'replay-network', 'errors'])
-    expect(source).toContain(`@minihog/core/${feature}`);
+    expect(source).toContain(`minihog/${feature}`);
   expect(source).toContain('urlAllowlistEnforced');
   expect(source).toContain('networkPayloadCapture');
   expect(source).toContain('autocapture: remote ? !remote.autocapture_opt_out && false');

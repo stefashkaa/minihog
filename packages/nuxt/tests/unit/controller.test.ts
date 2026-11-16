@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { createController } from '../../src/runtime/controller.ts';
-import type { MiniHog } from '@minihog/core';
+import type { MiniHog } from 'minihog';
 import type { PublicOptions } from '../../src/types.js';
 
 const config: PublicOptions = { key: 'test', proxyPath: '/api/_ph', start: 'manual', client: {} };

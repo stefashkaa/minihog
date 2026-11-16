@@ -1,4 +1,4 @@
-# @minihog/core
+# minihog
 
 A modular TypeScript client for PostHog's browser ingestion APIs. The event core imports no external runtime modules. Browser analytics, feature flags, surveys, errors, web vitals, heatmaps, and session replay have separate ESM entry points.
 
@@ -7,12 +7,12 @@ Each feature has an explicit import and startup function. See the entry points b
 ## Install and capture
 
 ```sh
-pnpm add @minihog/core
+pnpm add minihog
 ```
 
 ```ts
-import { createMiniHog } from '@minihog/core';
-import { startBrowserCapture } from '@minihog/core/browser';
+import { createMiniHog } from 'minihog';
+import { startBrowserCapture } from 'minihog/browser';
 
 const analytics = createMiniHog('phc_public_project_token', {
   apiHost: '/api/_ph',
@@ -52,7 +52,7 @@ Options and events are typed through `MiniHogOptions`, `CaptureOptions`, and `Ca
 
 | Import            | Functions                                                          | Included when used                                                                         |
 | ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `@minihog/core`   | `createMiniHog`                                                    | Events, queue, identity storage, sessions, consent                                         |
+| `minihog`         | `createMiniHog`                                                    | Events, queue, identity storage, sessions, consent                                         |
 | `/browser`        | `startBrowserCapture`                                              | Pageviews, pageleaves, SPA navigation, attribution, scroll depth, autocapture, rage clicks |
 | `/identity`       | `identify`, `setPersonProperties`, `alias`, `group`, `resetGroups` | Person and group event helpers                                                             |
 | `/flags`          | `createFeatureFlags`                                               | Remote v2 evaluations, variants, payloads, exposure events                                 |
@@ -72,7 +72,7 @@ Nothing imports these extensions from the root entry point. Enabled extensions s
 ## Identity and groups
 
 ```ts
-import { identify, group, setPersonProperties } from '@minihog/core/identity';
+import { identify, group, setPersonProperties } from 'minihog/identity';
 
 identify(analytics, 'account-123', { plan: 'pro' }, { signup_source: 'docs' });
 group(analytics, 'organization', 'team-456', { name: 'Example' });
@@ -116,7 +116,7 @@ Sessions expire after 30 minutes without activity and rotate after 24 hours. Rep
 ## Feature flags and experiments
 
 ```ts
-import { createFeatureFlags } from '@minihog/core/flags';
+import { createFeatureFlags } from 'minihog/flags';
 
 const flags = createFeatureFlags(analytics, {
   personProperties: { plan: 'pro' },
@@ -136,10 +136,10 @@ Unknown flags return `undefined`. Flag access records a deduplicated `$feature_f
 Replay, console recording, and web-vitals packages are required peers. npm 7+, pnpm with its default peer settings, and Bun install missing peers automatically. Yarn and configurations that disable peer installation may require the application to provide them. Import only the features you use; unused entry points and their peers are removed by tree-shaking.
 
 ```ts
-import { startWebVitals } from '@minihog/core/web-vitals';
-import { startSessionReplay } from '@minihog/core/replay';
-import { consoleRecordingPlugin } from '@minihog/core/replay-console';
-import { networkTimingPlugin } from '@minihog/core/replay-network';
+import { startWebVitals } from 'minihog/web-vitals';
+import { startSessionReplay } from 'minihog/replay';
+import { consoleRecordingPlugin } from 'minihog/replay-console';
+import { networkTimingPlugin } from 'minihog/replay-network';
 
 startWebVitals(analytics);
 const replay = startSessionReplay(analytics, {

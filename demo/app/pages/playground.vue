@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useHead } from '#imports';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { createMiniHog } from '@minihog/core';
-import type { CaptureEvent, MiniHog } from '@minihog/core';
-import { identify } from '@minihog/core/identity';
-import { createFeatureFlags } from '@minihog/core/flags';
+import { createMiniHog } from 'minihog';
+import type { CaptureEvent, MiniHog } from 'minihog';
+import { identify } from 'minihog/identity';
+import { createFeatureFlags } from 'minihog/flags';
 
 useHead({ title: 'Playground · MiniHog' });
 let client: MiniHog | undefined;

@@ -5,27 +5,27 @@ import { build } from 'esbuild';
 
 const fixtures = {
   core: {
-    source: "import { createMiniHog } from '@minihog/core'; window.analytics = createMiniHog('public');",
+    source: "import { createMiniHog } from 'minihog'; window.analytics = createMiniHog('public');",
     budget: 5000
   },
   browser: {
     source:
-      "import { createMiniHog } from '@minihog/core'; import { startBrowserCapture } from '@minihog/core/browser'; startBrowserCapture(createMiniHog('public'));",
+      "import { createMiniHog } from 'minihog'; import { startBrowserCapture } from 'minihog/browser'; startBrowserCapture(createMiniHog('public'));",
     budget: 8000
   },
   flags: {
     source:
-      "import { createMiniHog } from '@minihog/core'; import { createFeatureFlags } from '@minihog/core/flags'; window.flags = createFeatureFlags(createMiniHog('public'));",
+      "import { createMiniHog } from 'minihog'; import { createFeatureFlags } from 'minihog/flags'; window.flags = createFeatureFlags(createMiniHog('public'));",
     budget: 6500
   },
   replay: {
     source:
-      "import { createMiniHog } from '@minihog/core'; import { startSessionReplay } from '@minihog/core/replay'; startSessionReplay(createMiniHog('public'));",
+      "import { createMiniHog } from 'minihog'; import { startSessionReplay } from 'minihog/replay'; startSessionReplay(createMiniHog('public'));",
     budget: 50000
   },
   vitals: {
     source:
-      "import { createMiniHog } from '@minihog/core'; import { startWebVitals } from '@minihog/core/web-vitals'; startWebVitals(createMiniHog('public'));",
+      "import { createMiniHog } from 'minihog'; import { startWebVitals } from 'minihog/web-vitals'; startWebVitals(createMiniHog('public'));",
     budget: 12000
   }
 };
@@ -70,7 +70,7 @@ const metadata = JSON.parse(await readFile(new URL('../packages/core/package.jso
 assert.equal(metadata.sideEffects, false);
 const extensions = Object.keys(metadata.exports).filter((path) => path.startsWith('./') && path !== './package.json');
 const unused = await bundle(
-  `${fixtures.core.source}\n${extensions.map((entry, index) => `import * as unused${index} from '@minihog/core/${entry.slice(2)}';`).join('\n')}`
+  `${fixtures.core.source}\n${extensions.map((entry, index) => `import * as unused${index} from 'minihog/${entry.slice(2)}';`).join('\n')}`
 );
 assert.deepEqual(
   contributingInputs(unused),

@@ -7,14 +7,14 @@ const temporary = await mkdtemp(join(tmpdir(), 'minihog-npm-'));
 try {
   await mkdir('output', { recursive: true });
   const archive = resolve('output/minihog-core.tgz');
-  execFileSync('pnpm', ['--filter', '@minihog/core', 'pack', '--out', archive], { stdio: 'pipe' });
+  execFileSync('pnpm', ['--filter', 'minihog', 'pack', '--out', archive], { stdio: 'pipe' });
   await writeFile(
     join(temporary, 'package.json'),
     JSON.stringify({
       name: 'minihog-install-check',
       private: true,
       type: 'module',
-      dependencies: { '@minihog/core': `file:${archive}` }
+      dependencies: { minihog: `file:${archive}` }
     })
   );
   execFileSync('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: temporary, stdio: 'pipe' });
@@ -23,9 +23,7 @@ try {
   };
   const entries = Object.keys(metadata.exports).filter((entry) => entry !== './package.json');
   const source = entries
-    .map(
-      (entry) => `await import(${JSON.stringify(entry === '.' ? '@minihog/core' : `@minihog/core/${entry.slice(2)}`)});`
-    )
+    .map((entry) => `await import(${JSON.stringify(entry === '.' ? 'minihog' : `minihog/${entry.slice(2)}`)});`)
     .join('\n');
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { cwd: temporary, stdio: 'pipe' });
   await writeFile(
@@ -33,7 +31,7 @@ try {
     JSON.stringify(
       {
         npm: execFileSync('npm', ['--version'], { cwd: temporary, encoding: 'utf8' }).trim(),
-        onlyDirectDependency: '@minihog/core',
+        onlyDirectDependency: 'minihog',
         requiredPeersInstalled: true,
         importedEntriesDuringSSR: entries.length
       },

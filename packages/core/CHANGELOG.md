@@ -1,4 +1,4 @@
-# @minihog/core
+# minihog
 
 ## 0.1.0
 

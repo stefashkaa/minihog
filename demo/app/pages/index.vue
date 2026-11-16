@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 
 const target = ref<'core' | 'nuxt'>('core');
 const install = computed(() => `pnpm add @minihog/${target.value}`);
-const capture = `import { createMiniHog } from '@minihog/core';
+const capture = `import { createMiniHog } from 'minihog';
 
 const analytics = createMiniHog('phc_…', {
   apiHost: '/api/_ph'
@@ -17,7 +17,7 @@ const features = [
     number: '01',
     title: 'Start small.',
     text: 'Events, identity, sessions, and consent. The event core imports no external runtime modules.',
-    tag: '@minihog/core'
+    tag: 'minihog'
   },
   {
     number: '02',

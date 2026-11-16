@@ -6,6 +6,11 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   css: ['~/assets/styles.css'],
   minihog: { start: 'manual' },
+  vite: {
+    optimizeDeps: {
+      include: ['ogl']
+    }
+  },
   app: {
     head: {
       htmlAttrs: { lang: 'en' },

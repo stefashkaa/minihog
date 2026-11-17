@@ -1,5 +1,5 @@
 {
-  "name": "minihog",
+  "name": "@minihog/core",
   "version": "0.1.0",
   "description": "Small, modular PostHog client for modern browsers.",
   "type": "module",

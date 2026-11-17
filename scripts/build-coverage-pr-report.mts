@@ -66,12 +66,12 @@ type ReportHeaderParams = {
 
 const PACKAGE_REPORTS: PackageReport[] = [
   {
-    label: 'minihog',
+    label: '@minihog/core',
     file: 'packages/core/coverage/lcov.info',
     packagePath: 'packages/core/src'
   },
   {
-    label: 'minihog-nuxt',
+    label: '@minihog/nuxt',
     file: 'packages/nuxt/coverage/lcov.info',
     packagePath: 'packages/nuxt/src'
   }

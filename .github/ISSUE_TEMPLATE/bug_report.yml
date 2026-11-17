@@ -53,7 +53,7 @@ body:
         - Browser: Chrome (include version)
         - Node.js: 26.x
         - Nuxt: 4.6.4
-        - minihog: 0.1.0
+        - @minihog/core: 0.1.0
         - @minihog/nuxt: 0.1.0
         - Enabled features: pageviews, autocapture, session replay
     validations:

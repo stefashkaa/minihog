@@ -1,16 +1,16 @@
-# minihog
+# @minihog/core
 
 A modular TypeScript client for PostHog's browser ingestion APIs. The event core imports no external runtime modules. Browser analytics, feature flags, surveys, errors, web vitals, heatmaps, and session replay have separate ESM entry points.
 
 ## Install and capture
 
 ```sh
-pnpm add minihog
+pnpm add @minihog/core
 ```
 
 ```ts
-import { createMiniHog } from 'minihog';
-import { startBrowserCapture } from 'minihog/browser';
+import { createMiniHog } from '@minihog/core';
+import { startBrowserCapture } from '@minihog/core/browser';
 
 const analytics = createMiniHog('phc_public_project_token', {
   apiHost: '/api/_ph',
@@ -50,7 +50,7 @@ Options and events are typed through `MiniHogOptions`, `CaptureOptions`, and `Ca
 
 | Import            | Functions                                                          | Included when used                                                                         |
 | ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `minihog`         | `createMiniHog`                                                    | Events, queue, identity storage, sessions, consent                                         |
+| `@minihog/core`   | `createMiniHog`                                                    | Events, queue, identity storage, sessions, consent                                         |
 | `/browser`        | `startBrowserCapture`                                              | Pageviews, pageleaves, SPA navigation, attribution, scroll depth, autocapture, rage clicks |
 | `/identity`       | `identify`, `setPersonProperties`, `alias`, `group`, `resetGroups` | Person and group event helpers                                                             |
 | `/flags`          | `createFeatureFlags`                                               | Remote v2 evaluations, variants, payloads, exposure events                                 |
@@ -68,7 +68,7 @@ Options and events are typed through `MiniHogOptions`, `CaptureOptions`, and `Ca
 ## Identity and groups
 
 ```ts
-import { identify, group, setPersonProperties } from 'minihog/identity';
+import { identify, group, setPersonProperties } from '@minihog/core/identity';
 
 identify(analytics, 'account-123', { plan: 'pro' }, { signup_source: 'docs' });
 group(analytics, 'organization', 'team-456', { name: 'Example' });
@@ -112,7 +112,7 @@ Sessions expire after 30 minutes without activity and rotate after 24 hours. Rep
 ## Feature flags and experiments
 
 ```ts
-import { createFeatureFlags } from 'minihog/flags';
+import { createFeatureFlags } from '@minihog/core/flags';
 
 const flags = createFeatureFlags(analytics, {
   personProperties: { plan: 'pro' },
@@ -130,10 +130,10 @@ Unknown flags return `undefined`. Flag access records a deduplicated `$feature_f
 ## Web vitals and replay
 
 ```ts
-import { startWebVitals } from 'minihog/web-vitals';
-import { startSessionReplay } from 'minihog/replay';
-import { consoleRecordingPlugin } from 'minihog/replay-console';
-import { networkTimingPlugin } from 'minihog/replay-network';
+import { startWebVitals } from '@minihog/core/web-vitals';
+import { startSessionReplay } from '@minihog/core/replay';
+import { consoleRecordingPlugin } from '@minihog/core/replay-console';
+import { networkTimingPlugin } from '@minihog/core/replay-network';
 
 startWebVitals(analytics);
 const replay = startSessionReplay(analytics, {
@@ -155,11 +155,11 @@ Canvas pixels are excluded by default; set `recordCanvas: true` when they are ne
 Use dynamic imports to defer downloading and evaluating the recorder until your application's critical content is ready:
 
 ```ts
-async function startReplay(analytics: import('minihog').MiniHog) {
+async function startReplay(analytics: import('@minihog/core').MiniHog) {
   const [{ startSessionReplay }, { consoleRecordingPlugin }, { networkTimingPlugin }] = await Promise.all([
-    import('minihog/replay'),
-    import('minihog/replay-console'),
-    import('minihog/replay-network')
+    import('@minihog/core/replay'),
+    import('@minihog/core/replay-console'),
+    import('@minihog/core/replay-network')
   ]);
 
   return startSessionReplay(analytics, {

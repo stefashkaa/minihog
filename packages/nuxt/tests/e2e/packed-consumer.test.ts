@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import type { CaptureEvent } from 'minihog';
+import type { CaptureEvent } from '@minihog/core';
 
 const remote = JSON.parse(await readFile(new URL('../fixtures/recording-enabled.json', import.meta.url), 'utf8'));
 

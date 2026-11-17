@@ -1,6 +1,6 @@
 # @minihog/nuxt
 
-Nuxt 4 integration for `minihog`. It installs a typed controller, a `useMiniHog()` composable, and an allowlisted same-origin proxy. Feature imports are generated at build time, so disabled features produce no chunks. Enabled replay and web-vitals chunks load only when remote settings allow them.
+Nuxt 4 integration for `@minihog/core`. It installs a typed controller, a `useMiniHog()` composable, and an allowlisted same-origin proxy. Feature imports are generated at build time, so disabled features produce no chunks. Enabled replay and web-vitals chunks load only when remote settings allow them.
 
 ## Install
 
@@ -103,7 +103,7 @@ export default defineNuxtConfig({
 });
 ```
 
-For feature flags, identity helpers, or headless surveys, add `minihog` as a direct dependency and import the corresponding entry point.
+For feature flags, identity helpers, or headless surveys, add `@minihog/core` as a direct dependency and import the corresponding entry point.
 
 Remote settings can only enable locally selected features. Unsupported replay targeting/payload rules and enforced heatmap URL rules disable those features and produce a warning.
 

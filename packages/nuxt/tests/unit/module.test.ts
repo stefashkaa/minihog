@@ -31,18 +31,20 @@ test('proxy rejects scripts, management endpoints, traversal, and wrong methods'
 
 test('disabled feature imports are absent from generated initialization', () => {
   const source = initializerSource({});
-  assert.ok(source.includes('minihog/browser'));
+  assert.ok(source.includes('@minihog/core/browser'));
   for (const feature of ['replay', 'web-vitals', 'surveys', 'flags', 'errors'])
-    assert.equal(source.includes(`minihog/${feature}`), false);
-  assert.equal(initializerSource({ browser: false }).includes('minihog/browser'), false);
+    assert.equal(source.includes(`@minihog/core/${feature}`), false);
+  assert.equal(initializerSource({ browser: false }).includes('@minihog/core/browser'), false);
 });
 
 test('enabled replay includes only the selected diagnostic imports', () => {
   const source = initializerSource({ replay: true });
-  assert.ok(source.includes('minihog/replay'));
-  assert.equal(source.includes('minihog/replay-console'), false);
-  assert.equal(source.includes('minihog/replay-network'), false);
+  assert.ok(source.includes('@minihog/core/replay'));
+  assert.equal(source.includes('@minihog/core/replay-console'), false);
+  assert.equal(source.includes('@minihog/core/replay-network'), false);
   assert.ok(
-    initializerSource({ replay: true, consoleRecording: true, networkTiming: true }).includes('minihog/replay-network')
+    initializerSource({ replay: true, consoleRecording: true, networkTiming: true }).includes(
+      '@minihog/core/replay-network'
+    )
   );
 });

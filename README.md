@@ -4,7 +4,7 @@ Modular PostHog analytics for modern browsers. Import the features you use: even
 
 | Package                                    | Purpose                                                |
 | ------------------------------------------ | ------------------------------------------------------ |
-| [`minihog`](packages/core/README.md)       | Framework-independent TypeScript client                |
+| [`@minihog/core`](packages/core/README.md) | Framework-independent TypeScript client                |
 | [`@minihog/nuxt`](packages/nuxt/README.md) | Nuxt 4 module, same-origin proxy, and deferred startup |
 
 ## Why MiniHog?
@@ -22,12 +22,12 @@ See the [comparison with posthog-js](COMPARISON.md) for measured bundle sizes, s
 ## Browser
 
 ```sh
-pnpm add minihog
+pnpm add @minihog/core
 ```
 
 ```ts
-import { createMiniHog } from 'minihog';
-import { startBrowserCapture } from 'minihog/browser';
+import { createMiniHog } from '@minihog/core';
+import { startBrowserCapture } from '@minihog/core/browser';
 
 const analytics = createMiniHog('phc_public_project_token', {
   apiHost: 'https://eu.i.posthog.com'

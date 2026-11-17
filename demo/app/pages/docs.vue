@@ -3,11 +3,11 @@ import { useHead } from '#imports';
 import { computed, ref } from 'vue';
 useHead({ title: 'Documentation · MiniHog' });
 const platform = ref<'core' | 'nuxt'>('core');
-const install = computed(() => `pnpm add ${platform.value === 'core' ? 'minihog' : '@minihog/nuxt'}`);
+const install = computed(() => `pnpm add @minihog/${platform.value}`);
 const setup = computed(() =>
   platform.value === 'core'
-    ? `import { createMiniHog } from 'minihog';
-import { startBrowserCapture } from 'minihog/browser';
+    ? `import { createMiniHog } from '@minihog/core';
+import { startBrowserCapture } from '@minihog/core/browser';
 
 const analytics = createMiniHog('phc_your_public_token', {
   apiHost: 'https://eu.i.posthog.com',
@@ -40,7 +40,7 @@ const navigation = [
   ['compatibility', 'Compatibility']
 ];
 const entryPoints = [
-  ['minihog', 'createMiniHog', 'Events, sessions, persistence, consent'],
+  ['@minihog/core', 'createMiniHog', 'Events, sessions, persistence, consent'],
   ['/browser', 'startBrowserCapture', 'Pageviews, SPA navigation, autocapture'],
   ['/identity', 'identify, group, alias', 'People and group properties'],
   ['/flags', 'createFeatureFlags', 'Variants, payloads, exposure events'],
@@ -67,7 +67,7 @@ const consent = `const analytics = createMiniHog('phc_your_public_token', {
 
 analytics.optIn();
 
-import { identify, group } from 'minihog/identity';
+import { identify, group } from '@minihog/core/identity';
 identify(analytics, 'account-123', { plan: 'pro' });
 group(analytics, 'organization', 'team-456');
 analytics.reset(); // Return to an anonymous identity on logout.
@@ -82,10 +82,10 @@ const deferred = `export default defineNuxtPlugin({
     });
   }
 });`;
-const replay = `import { startSessionReplay } from 'minihog/replay';
-import { consoleRecordingPlugin } from 'minihog/replay-console';
-import { networkTimingPlugin } from 'minihog/replay-network';
-import { startWebVitals } from 'minihog/web-vitals';
+const replay = `import { startSessionReplay } from '@minihog/core/replay';
+import { consoleRecordingPlugin } from '@minihog/core/replay-console';
+import { networkTimingPlugin } from '@minihog/core/replay-network';
+import { startWebVitals } from '@minihog/core/web-vitals';
 
 startWebVitals(analytics);
 const replay = startSessionReplay(analytics, {
@@ -93,7 +93,7 @@ const replay = startSessionReplay(analytics, {
   plugins: [consoleRecordingPlugin(), networkTimingPlugin(analytics.apiHost)]
 });
 replay.stop();`;
-const flags = `import { createFeatureFlags } from 'minihog/flags';
+const flags = `import { createFeatureFlags } from '@minihog/core/flags';
 
 const flags = createFeatureFlags(analytics);
 await flags.reload();
@@ -183,7 +183,7 @@ const payload = flags.getFeatureFlagPayload('new-checkout');`;
         <h2>Entry points</h2>
         <p>
           Each extension is imported explicitly. Unused imports can be removed by your bundler. Prefix short paths below
-          with <code>minihog</code>.
+          with <code>@minihog/core</code>.
         </p>
         <div class="table-scroll" tabindex="0" role="region" aria-label="API entry points">
           <table>
@@ -232,8 +232,8 @@ const payload = flags.getFeatureFlagPayload('new-checkout');`;
         <CodeBlock :code="flags" />
         <p>
           Unknown flags return <code>undefined</code>. Access records a deduplicated exposure event. Identity and group
-          changes invalidate the previous result and reload flags. In a Nuxt app, install <code>minihog</code> directly
-          before importing its helpers.
+          changes invalidate the previous result and reload flags. In a Nuxt app, install
+          <code>@minihog/core</code> directly before importing its helpers.
         </p>
       </section>
       <section id="compatibility">

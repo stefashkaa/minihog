@@ -1,5 +1,5 @@
-import type { MiniHog, MiniHogOptions } from 'minihog';
-import type { BrowserOptions } from 'minihog/browser';
+import type { MiniHog, MiniHogOptions } from '@minihog/core';
+import type { BrowserOptions } from '@minihog/core/browser';
 
 export interface ModuleOptions {
   key?: string;

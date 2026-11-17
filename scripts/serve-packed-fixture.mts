@@ -45,7 +45,7 @@ try {
   await writeFile(join(temporary, 'package.json'), JSON.stringify(json));
   await writeFile(
     join(temporary, 'pnpm-workspace.yaml'),
-    `overrides:\n  'minihog': 'file:${resolve('output/minihog-core.tgz')}'\nallowBuilds:\n  esbuild: true\n`
+    `overrides:\n  '@minihog/core': 'file:${resolve('output/minihog-core.tgz')}'\nallowBuilds:\n  esbuild: true\n`
   );
   run(['install', '--ignore-scripts']);
   run(['run', 'typecheck']);

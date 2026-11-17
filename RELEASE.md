@@ -9,6 +9,6 @@ Both packages share a version through the fixed Changesets group.
 
 The workflow publishes unpublished package versions and creates one GitHub release from the core changelog. Failed publication can be retried; published versions are skipped.
 
-Configure a GitHub Actions `NPM_TOKEN` secret with permission to publish both `minihog` and `@minihog/nuxt`. The workflow uses npm provenance and requires `id-token: write`; GitHub release creation requires `contents: write`. Configure `CODECOV_TOKEN` for coverage uploads.
+Configure a GitHub Actions `NPM_TOKEN` secret with permission to publish both `@minihog/core` and `@minihog/nuxt`. The workflow uses npm provenance and requires `id-token: write`; GitHub release creation requires `contents: write`. Configure `CODECOV_TOKEN` for coverage uploads.
 
 For local package validation without publishing, run `pnpm publish:check`.

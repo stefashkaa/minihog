@@ -3,19 +3,19 @@ import type { ModuleOptions } from './types.js';
 /** Generates imports at build time so disabled features have no output chunks. */
 export function initializerSource(options: ModuleOptions): string {
   const imports = [
-    "import { createMiniHog } from 'minihog';",
-    "import { getRemoteConfig } from 'minihog/remote-config';"
+    "import { createMiniHog } from '@minihog/core';",
+    "import { getRemoteConfig } from '@minihog/core/remote-config';"
   ];
   const setup: string[] = [];
   if (options.browser !== false) {
-    imports.push("import { startBrowserCapture } from 'minihog/browser';");
+    imports.push("import { startBrowserCapture } from '@minihog/core/browser';");
     setup.push(
       `cleanups.push(startBrowserCapture(client, { ...${JSON.stringify(options.browser ?? {})}, autocapture: remote ? !remote.autocapture_opt_out && ${options.browser?.autocapture !== false} : false }));`
     );
   }
   if (options.webVitals) {
     setup.push(`if (remote?.capturePerformance?.web_vitals) {
-      const { startWebVitals } = await import('minihog/web-vitals');
+      const { startWebVitals } = await import('@minihog/core/web-vitals');
       if (!valid()) return;
       cleanups.push(startWebVitals(client, remote.capturePerformance.web_vitals_allowed_metrics ?? undefined));
     }`);
@@ -26,7 +26,7 @@ export function initializerSource(options: ModuleOptions): string {
       if (typeof rules === 'object' && rules.urlAllowlistEnforced) {
         console.warn('[minihog] Heatmaps disabled: enforced URL targeting requires an explicit integration.');
       } else {
-        const { startHeatmaps } = await import('minihog/heatmaps');
+        const { startHeatmaps } = await import('@minihog/core/heatmaps');
         if (!valid()) return;
         cleanups.push(startHeatmaps(client));
       }
@@ -41,11 +41,11 @@ export function initializerSource(options: ModuleOptions): string {
         if (unsupported) {
           console.warn('[minihog] Replay disabled: remote targeting or payload rules require an explicit integration.');
         } else {
-          const { startSessionReplay } = await import('minihog/replay');
+          const { startSessionReplay } = await import('@minihog/core/replay');
           if (!valid()) return;
           const plugins = [];
-          ${options.consoleRecording ? "if (recording.consoleLogRecordingEnabled) { const { consoleRecordingPlugin } = await import('minihog/replay-console'); if (!valid()) return; plugins.push(consoleRecordingPlugin()); }" : ''}
-          ${options.networkTiming ? "if (remote.capturePerformance?.network_timing) { const { networkTimingPlugin } = await import('minihog/replay-network'); if (!valid()) return; plugins.push(networkTimingPlugin(client.apiHost)); }" : ''}
+          ${options.consoleRecording ? "if (recording.consoleLogRecordingEnabled) { const { consoleRecordingPlugin } = await import('@minihog/core/replay-console'); if (!valid()) return; plugins.push(consoleRecordingPlugin()); }" : ''}
+          ${options.networkTiming ? "if (remote.capturePerformance?.network_timing) { const { networkTimingPlugin } = await import('@minihog/core/replay-network'); if (!valid()) return; plugins.push(networkTimingPlugin(client.apiHost)); }" : ''}
           cleanups.push(startSessionReplay(client, {
             plugins,
             sampleRate: recording.sampleRate == null ? 1 : Number(recording.sampleRate),
@@ -58,7 +58,7 @@ export function initializerSource(options: ModuleOptions): string {
     `);
   }
   if (options.errorCapture) {
-    imports.push("import { startErrorCapture } from 'minihog/errors';");
+    imports.push("import { startErrorCapture } from '@minihog/core/errors';");
     setup.push('cleanups.push(startErrorCapture(client));');
   }
   return `${imports.join('\n')}

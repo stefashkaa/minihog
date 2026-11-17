@@ -244,12 +244,12 @@ importers:
 
   demo:
     dependencies:
+      '@minihog/core':
+        specifier: workspace:^
+        version: link:../packages/core
       '@minihog/nuxt':
         specifier: workspace:^
         version: link:../packages/nuxt
-      minihog:
-        specifier: workspace:^
-        version: link:../packages/core
       ogl:
         specifier: ^1.0.11
         version: 1.0.11
@@ -284,7 +284,7 @@ importers:
 
   packages/nuxt:
     dependencies:
-      minihog:
+      '@minihog/core':
         specifier: workspace:^
         version: link:../core
     devDependencies:

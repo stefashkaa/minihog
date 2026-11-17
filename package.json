@@ -25,7 +25,7 @@
     "publish:check": "pnpm -r --filter \"./packages/**\" --stream run publish:check",
     "check:release": "pnpm format:check && pnpm lint && pnpm check:peers && pnpm audit:prod && pnpm build && pnpm typecheck && pnpm build:demo && pnpm publish:check && pnpm size && pnpm check:install && pnpm test:unit:coverage && pnpm test:e2e",
     "changeset": "changeset",
-    "changeset:version": "changeset version && pnpm --filter minihog build:version && node scripts/format-changelog-dependencies.mts",
+    "changeset:version": "changeset version && pnpm --filter @minihog/core build:version && node scripts/format-changelog-dependencies.mts",
     "changeset:publish": "pnpm build && pnpm publish:check && changeset publish --no-git-tag",
     "dev:demo": "pnpm build && pnpm --filter demo dev",
     "dev:prepare": "pnpm --filter demo prepare:deps",

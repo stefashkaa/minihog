@@ -135,3 +135,38 @@ test('custom fetch owns unload delivery instead of bypassing its transport', asy
   expect(sender.request).toHaveBeenCalledTimes(1);
   expect(beacon).not.toHaveBeenCalled();
 });
+
+test('serialized replay respects custom property serialization', async (t) => {
+  const sender = transport(t);
+  const snapshot = [{ text: 'private' }];
+  const toJSON = vi.fn(function (this: { $snapshot_data: unknown }) {
+    expect(this.$snapshot_data).toEqual(snapshot);
+    return { redacted: true };
+  });
+  const json = JSON.stringify(snapshot);
+  sender.enqueue({ ...event(), properties: { distinct_id: 'id', toJSON } }, '/s/', {
+    key: '$snapshot_data',
+    json,
+    bytes: new TextEncoder().encode(json).length
+  });
+  await sender.flush();
+  expect(toJSON).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(sender.request.mock.calls[0]![1].body)[0].properties).toEqual({ redacted: true });
+  expect(sender.errors).toHaveLength(0);
+});
+
+for (const endpoint of ['/batch/', '/s/'] as const) {
+  test(`UTF-8 envelope bytes determine keepalive eligibility for ${endpoint}`, async (t) => {
+    const sender = transport(t);
+    const captured = event(1, '💛'.repeat(12000));
+    const json = JSON.stringify([{ text: 'é'.repeat(1000) }]);
+    sender.enqueue(captured, endpoint, { key: '$snapshot_data', json, bytes: new TextEncoder().encode(json).length });
+    await sender.flush(true);
+    const init = sender.request.mock.calls[0]![1];
+    expect(init.body.length).toBeLessThan(48 * 1024);
+    expect(new TextEncoder().encode(init.body).length).toBeGreaterThan(48 * 1024);
+    expect(init.keepalive).toBe(false);
+    const body = JSON.parse(init.body);
+    expect((endpoint === '/s/' ? body : body.batch)[0].properties.$snapshot_data).toEqual(JSON.parse(json));
+  });
+}

@@ -1,4 +1,5 @@
-import type { Cleanup, MiniHog, MiniHogOptions, Properties, StorageLike } from '../types.js';
+import type { CaptureOptions, Cleanup, MiniHog, MiniHogOptions, Properties, StorageLike } from '../types.js';
+import type { SerializedProperty } from './transport.js';
 
 export interface State {
   distinctId: string;
@@ -16,6 +17,12 @@ export interface Context {
   save(): void;
   error(error: unknown): void;
   identityChanged(): void;
+  captureSerialized(
+    name: string,
+    properties: Properties,
+    serialized: SerializedProperty,
+    options: CaptureOptions
+  ): void;
   cleanups: Set<Cleanup>;
 }
 

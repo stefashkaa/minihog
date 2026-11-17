@@ -1,8 +1,9 @@
 import { browserStorage, contexts, legacyState, object, read, uuid, validSession } from './internal/state.js';
 import type { State } from './internal/state.js';
 import { createTransport } from './internal/transport.js';
+import type { SerializedProperty } from './internal/transport.js';
 import { VERSION } from './internal/version.js';
-import type { CaptureEvent, Cleanup, MiniHog, MiniHogOptions } from './types.js';
+import type { CaptureEvent, CaptureOptions, Cleanup, MiniHog, MiniHogOptions, Properties } from './types.js';
 
 export type {
   CaptureEvent,
@@ -123,42 +124,54 @@ export function createMiniHog(token: string, options: MiniHogOptions = {}): Mini
     notify(consentListeners, !hasOptedOut());
   }
 
+  function capture(
+    name: string,
+    properties: Properties = {},
+    captureOptions: CaptureOptions = {},
+    serialized?: SerializedProperty
+  ): CaptureEvent | undefined {
+    if (hasOptedOut() || !name) return;
+    try {
+      const sessionId = session(!captureOptions.passive);
+      let event: CaptureEvent | null = {
+        event: name,
+        uuid: uuid(),
+        timestamp: (captureOptions.timestamp ?? new Date()).toISOString(),
+        properties: {
+          ...state.properties,
+          $lib: 'minihog',
+          $lib_version: VERSION,
+          $device_id: state.deviceId,
+          $session_id: sessionId,
+          $window_id: windowId,
+          $configured_session_timeout_ms: timeout,
+          $is_identified: state.identified,
+          $process_person_profile:
+            options.personProfiles === 'always' ||
+            (options.personProfiles !== 'never' && (state.identified || state.personProcessing)),
+          ...properties,
+          distinct_id: state.distinctId
+        }
+      };
+      if (options.beforeSend) {
+        // Redaction hooks always receive ordinary data and may replace or drop it.
+        if (serialized) event.properties[serialized.key] = JSON.parse(serialized.json);
+        serialized = undefined;
+        event = options.beforeSend(event);
+      }
+      if (!event) return;
+      transport.enqueue(event, captureOptions.endpoint ?? '/batch/', serialized);
+      return event;
+    } catch (cause) {
+      error(cause);
+      return;
+    }
+  }
+
   const client: MiniHog = {
     token,
     apiHost,
-    capture(name, properties = {}, captureOptions = {}) {
-      if (hasOptedOut() || !name) return;
-      try {
-        const sessionId = session(!captureOptions.passive);
-        let event: CaptureEvent | null = {
-          event: name,
-          uuid: uuid(),
-          timestamp: (captureOptions.timestamp ?? new Date()).toISOString(),
-          properties: {
-            ...state.properties,
-            $lib: 'minihog',
-            $lib_version: VERSION,
-            $device_id: state.deviceId,
-            $session_id: sessionId,
-            $window_id: windowId,
-            $configured_session_timeout_ms: timeout,
-            $is_identified: state.identified,
-            $process_person_profile:
-              options.personProfiles === 'always' ||
-              (options.personProfiles !== 'never' && (state.identified || state.personProcessing)),
-            ...properties,
-            distinct_id: state.distinctId
-          }
-        };
-        if (options.beforeSend) event = options.beforeSend(event);
-        if (!event) return;
-        transport.enqueue(event, captureOptions.endpoint ?? '/batch/');
-        return event;
-      } catch (cause) {
-        error(cause);
-        return;
-      }
-    },
+    capture,
     flush: (flushOptions) => transport.flush(flushOptions?.beacon),
     register(properties) {
       Object.assign(state.properties, properties);
@@ -228,7 +241,18 @@ export function createMiniHog(token: string, options: MiniHogOptions = {}): Mini
       contexts.delete(client);
     }
   };
-  contexts.set(client, { state, options, storage, save, error, identityChanged, cleanups });
+  contexts.set(client, {
+    state,
+    options,
+    storage,
+    save,
+    error,
+    identityChanged,
+    cleanups,
+    captureSerialized: (name, properties, serialized, captureOptions) => {
+      capture(name, properties, captureOptions, serialized);
+    }
+  });
   save();
   if (typeof window !== 'undefined') {
     const flush = () => void client.flush({ beacon: true });

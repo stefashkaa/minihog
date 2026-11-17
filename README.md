@@ -2,8 +2,6 @@
 
 Modular PostHog analytics for modern browsers. Import the features you use: events, pageviews, autocapture, heatmaps, feature flags, surveys, errors, web vitals, or session replay.
 
-The event core imports no external runtime modules. Replay and web-vitals are required peers that npm 7+, pnpm's default settings, and Bun install automatically. They enter your browser bundle only when used. Optional features use separate ESM entry points and support tree-shaking. MiniHog adds no polyfills and never downloads executable code from PostHog.
-
 | Package                                    | Purpose                                                |
 | ------------------------------------------ | ------------------------------------------------------ |
 | [`minihog`](packages/core/README.md)       | Framework-independent TypeScript client                |
@@ -17,9 +15,9 @@ MiniHog gives each feature its own ESM entry point so your bundler can remove un
 
 [![Lighthouse before and after: posthog-js has legacy and unused JavaScript findings; MiniHog passes both audits with replay and diagnostics still enabled.](docs/assets/lighthouse-comparison.png)](docs/assets/lighthouse-comparison.png)
 
-The Lighthouse excerpts above show analytics-related legacy and unused JavaScript findings before switching to MiniHog, and zero findings in those two audits afterward. Session replay, console and network diagnostics, and web vitals stayed enabled. Recording still has a runtime cost; these results cover the two audits shown.
+The Lighthouse excerpts show zero analytics-related legacy or unused JavaScript findings after switching to MiniHog. Session replay, console and network diagnostics, and web vitals stayed enabled.
 
-See the [reproducible comparison with posthog-js](COMPARISON.md) for bundle sizes, startup CPU, capture timings, and measurement limits. In its full-diagnostics workload, MiniHog's loaded JavaScript measured 37.66 KiB gzipped versus 210.50 KiB for `posthog-js`.
+See the [comparison with posthog-js](COMPARISON.md) for measured bundle sizes, startup CPU, capture timings, and reproduction steps.
 
 ## Browser
 
@@ -39,6 +37,8 @@ startBrowserCapture(analytics);
 analytics.capture('project_opened', { slug: 'example' });
 ```
 
+See the [core guide](packages/core/README.md) for client options, identity, consent, and optional features.
+
 ## Nuxt
 
 ```sh
@@ -55,34 +55,19 @@ export default defineNuxtConfig({
 });
 ```
 
-Set `NUXT_PUBLIC_MINIHOG_KEY` to your public project token. Call `await useMiniHog().start()` when the application is ready to collect analytics. An empty key makes no analytics requests and leaves the implementation unloaded.
+Set `NUXT_PUBLIC_MINIHOG_KEY` to your public project token. Call `await useMiniHog().start()` when the application is ready to collect analytics.
 
 The module proxies supported ingestion endpoints through `/api/_ph`. See the [Nuxt guide](packages/nuxt/README.md) for automatic startup, consent, and optional diagnostics.
 
-## Features and compatibility
+## Compatibility
 
-MiniHog supports event batching, identity and group helpers, session persistence, consent, SPA pageviews, pageleaves, scroll depth, click capture, heatmaps, remote feature flags, headless surveys, and error capture. Replay uses a bundled rrweb recorder, with optional console and network-timing plugins. Web vitals use Google's metric algorithms.
-
-The API uses explicit imports and camelCase methods. It does not provide the full `posthog-js` method surface, survey rendering, toolbar, product tours, conversations, or advanced replay targeting. The [core guide](packages/core/README.md) documents persistence migration, delivery guarantees, browser requirements, and replay protocol boundaries.
-
-Tree-shaking removes unused features. Enabled replay still requires recorder code and runtime work. Performance depends on the enabled features and the host application; measure the production build with those features active.
+MiniHog targets ES2022 browsers and uses an explicit API with camelCase methods. Migrating from `posthog-js` requires updating calls and checking [supported features](packages/core/README.md#entry-points), [identity migration](packages/core/README.md#identity-and-groups), and [compatibility](packages/core/README.md#compatibility).
 
 MiniHog is an independent project and is not affiliated with PostHog.
 
-## Development
+## Contributing
 
-```sh
-pnpm install
-pnpm build
-pnpm dev:demo
-# In a separate terminal, run the checks:
-pnpm exec playwright install chromium
-pnpm check:release
-```
-
-Checks include ESLint, Prettier, TypeScript, peer dependencies, production dependency auditing, publint, Are the Types Wrong, bundle budgets, tree-shaking, Vitest/V8 coverage, and Playwright tests against packed packages. Coverage must meet 95% for statements, branches, functions, and lines in each package. All runtime source files are included.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [demo site](demo).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, the demo, and checks. Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { fixture } from './helpers.ts';
 import { startSessionReplay } from '../../src/replay.ts';
+import type { CaptureEvent } from '../../src/types.js';
 
 const recorder = vi.hoisted(() => ({ record: vi.fn(), stop: vi.fn() }));
 vi.mock('@rrweb/record', () => ({ record: recorder.record }));
@@ -13,6 +14,49 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 const snapshot = (data = {}) => ({ type: 2, data, timestamp: Date.now() });
+
+test('replay serializes captured snapshots once and preserves Unicode and JSON escaping on the wire', async () => {
+  const { client, requests } = fixture({ beforeSend: undefined });
+  const replay = startSessionReplay(client);
+  const text = 'Grüße 💛 \\"},"token":"not-a-token"';
+  let reads = 0;
+  const data = {
+    get text() {
+      reads++;
+      return text;
+    }
+  };
+  recorder.record.mock.calls[0]![0].emit(snapshot(data));
+  expect(reads).toBe(1);
+  replay.flush();
+  await client.flush();
+  expect(reads).toBe(1);
+  const body = JSON.parse(requests[0]!.body as string);
+  expect(body[0].properties.$snapshot_data).toEqual([snapshot({ text })]);
+  expect(body[0].properties.token).toBe('test');
+  expect(body[0].properties.$snapshot_bytes).toBe(new TextEncoder().encode(JSON.stringify(snapshot({ text }))).length);
+});
+
+test('beforeSend can inspect, redact, replace and drop buffered replay data', async () => {
+  const beforeSend = vi.fn((event: CaptureEvent) => {
+    if (beforeSend.mock.calls.length === 2) return null;
+    expect(Array.isArray(event.properties.$snapshot_data)).toBe(true);
+    return { ...event, properties: { ...event.properties, $snapshot_data: [snapshot({ redacted: true })] } };
+  });
+  const { client, requests } = fixture({ beforeSend });
+  const replay = startSessionReplay(client);
+  const emit = recorder.record.mock.calls[0]![0].emit;
+  emit(snapshot({ private: 'PRIVATE_VALUE' }));
+  replay.flush();
+  emit(snapshot({ private: 'DROP_ME' }));
+  replay.flush();
+  await client.flush();
+  expect(beforeSend).toHaveBeenCalledTimes(2);
+  expect(requests).toHaveLength(1);
+  const body = requests[0]!.body as string;
+  expect(body).not.toMatch(/PRIVATE_VALUE|DROP_ME/);
+  expect(JSON.parse(body)[0].properties.$snapshot_data).toEqual([snapshot({ redacted: true })]);
+});
 
 test('replay masks inputs, uses separate ingestion and preserves snapshot session metadata', () => {
   const { client, events } = fixture();
@@ -27,7 +71,8 @@ test('replay masks inputs, uses separate ingestion and preserves snapshot sessio
     blockClass: 'ph-no-capture',
     blockSelector: '.ph-sensitive,[data-private]',
     maskTextSelector: '.private',
-    recordCanvas: false
+    recordCanvas: false,
+    slimDOMOptions: { script: true, comment: true, headWhitespace: true }
   });
   options.emit(snapshot({ node: 'safe' }));
   controller.flush();
@@ -115,7 +160,13 @@ test('minimum duration buffers snapshots, size limits flush, and excess bufferin
 
 test('hidden and pagehide flush snapshots; visible transitions do not flush', async () => {
   const { client, events } = fixture();
-  startSessionReplay(client, { maskAllInputs: false, blockSelector: '.custom', recordCanvas: true });
+  startSessionReplay(client, {
+    maskAllInputs: false,
+    blockSelector: '.custom',
+    recordCanvas: true,
+    slimDOMOptions: {}
+  });
+  expect(recorder.record.mock.calls[0]![0].slimDOMOptions).toEqual({});
   const emit = recorder.record.mock.calls[0]![0].emit;
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
   emit(snapshot());

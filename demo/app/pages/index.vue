@@ -2,11 +2,11 @@
 import { computed, ref } from 'vue';
 
 const target = ref<'core' | 'nuxt'>('core');
-const install = computed(() => `pnpm add @minihog/${target.value}`);
+const install = computed(() => `pnpm add ${target.value === 'core' ? 'minihog' : '@minihog/nuxt'}`);
 const capture = `import { createMiniHog } from 'minihog';
 
 const analytics = createMiniHog('phc_…', {
-  apiHost: '/api/_ph'
+  apiHost: 'https://eu.i.posthog.com'
 });
 
 analytics.capture('something_good', {
@@ -28,7 +28,7 @@ const features = [
   {
     number: '03',
     title: 'Choose when it starts.',
-    text: 'Wait for your gallery, editor, or consent flow. The Nuxt module loads analytics when you call start().',
+    text: 'Load analytics after critical content or consent. The Nuxt module supports manual startup through start().',
     tag: '@minihog/nuxt'
   }
 ];

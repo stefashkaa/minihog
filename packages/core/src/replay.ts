@@ -21,6 +21,8 @@ export interface ReplayOptions {
   /** Supply plugins explicitly so unused diagnostic implementations are removable. */
   plugins?: RecorderPlugin[];
   recordCanvas?: boolean;
+  /** Omit nonvisual DOM nodes. Pass {} to retain them in snapshots. */
+  slimDOMOptions?: RecorderOptions['slimDOMOptions'];
 }
 
 export interface ReplayController {
@@ -39,7 +41,7 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
   if (!Number.isFinite(sampleRate) || sampleRate < 0 || sampleRate > 1)
     throw new Error('Replay sampleRate must be between 0 and 1.');
   let stopRecording: Cleanup | undefined;
-  let snapshots: Snapshot[] = [];
+  let snapshots: string[] = [];
   let bytes = 0;
   let sessionId = client.getSessionId();
   const windowId = client.getWindowId();
@@ -60,10 +62,9 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
       return;
     }
     if (Date.now() - started < (options.minimumDurationMs ?? 0)) return;
-    client.capture(
+    current.captureSerialized(
       '$snapshot',
       {
-        $snapshot_data: snapshots,
         $snapshot_bytes: bytes,
         $session_id: sessionId,
         $window_id: windowId,
@@ -71,6 +72,7 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
         $lib: 'web',
         $lib_version: `minihog-${VERSION}`
       },
+      { key: '$snapshot_data', json: `[${snapshots.join(',')}]`, bytes: bytes + snapshots.length + 1 },
       { endpoint: '/s/', passive: true }
     );
     snapshots = [];
@@ -79,7 +81,8 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
 
   function emit(event: Snapshot) {
     if (client.hasOptedOut() || stopped) return;
-    const size = encoder.encode(JSON.stringify(event)).byteLength;
+    const json = JSON.stringify(event);
+    const size = encoder.encode(json).byteLength;
     if (bytes + size > 48 * 1024) flush();
     if (bytes + size > 1024 * 1024) {
       // Do not retain an unbounded recording while waiting for a minimum duration.
@@ -89,7 +92,7 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
       queueMicrotask(() => stop());
       return;
     }
-    snapshots.push(event);
+    snapshots.push(json);
     bytes += size;
     if (!timer) timer = setTimeout(flush, 1000);
   }
@@ -122,6 +125,7 @@ export function startSessionReplay(client: MiniHog, options: ReplayOptions = {})
         recordCanvas: options.recordCanvas ?? false,
         inlineStylesheet: true,
         collectFonts: false,
+        slimDOMOptions: options.slimDOMOptions ?? { script: true, comment: true, headWhitespace: true },
         checkoutEveryNms: 5 * 60 * 1000,
         plugins: options.plugins,
         errorHandler: (error) => {

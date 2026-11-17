@@ -1,35 +1,32 @@
 # Contributing
 
-Use Node.js 26.x and pnpm 12.18.0. Install dependencies with `pnpm install`; CI uses the frozen lockfile.
+Use Node.js 26.x and pnpm 12.18.0.
+
+```sh
+pnpm install
+pnpm dev:demo
+```
+
+`dev:demo` builds the packages and starts the Nuxt demo.
 
 ## Checks
 
 ```sh
-pnpm build
-pnpm lint
-pnpm format:check
-pnpm typecheck
-pnpm test:unit:coverage
 pnpm exec playwright install chromium
-pnpm test:e2e
-pnpm size
-pnpm publish:check
-pnpm check:install
-pnpm check:peers
-pnpm audit:prod
+pnpm check:release
 ```
 
-`pnpm check:release` runs the full sequence. `pnpm format` applies Prettier formatting. The Husky pre-commit hook runs ESLint and Prettier through lint-staged.
+`check:release` runs formatting, lint, peer and dependency checks, builds, type checks, package validation, bundle budgets, consumer installation checks, and tests. For individual checks, see the [workspace scripts](package.json). `pnpm format` applies formatting; the pre-commit hook checks staged files with ESLint and Prettier.
 
-Vitest tests import source files. Coverage includes every runtime source file and requires at least 95% statements, branches, functions, and lines in each package. Use behavior assertions for wire formats, consent, retries, identity, browser listeners, and teardown. Keep real browser tests for DOM recording and Nuxt integration.
+Run `pnpm test:unit:coverage` for Vitest tests. They import source files and require at least 95% statements, branches, functions, and lines across all runtime files in each package. Test observable behavior, including wire formats, consent, retries, identity, and cleanup.
 
-Playwright builds npm archives, installs them into an isolated Nuxt consumer with no direct core, rrweb, console-plugin, or web-vitals dependency, checks types, and builds with optional features both disabled and enabled. It verifies that disabled features produce no chunks, then exercises the built application. Tests live in `packages/nuxt/tests/e2e/packed-consumer.test.ts` and fixtures in `packages/nuxt/tests/fixtures/consumer`. All analytics traffic is intercepted locally with a synthetic public token.
+Run `pnpm test:e2e` for Playwright tests against packed packages. These cover peer installation, Nuxt builds with features enabled and disabled, DOM recording, and diagnostics. Tests live in [`packages/nuxt/tests/e2e`](packages/nuxt/tests/e2e), with fixtures in [`packages/nuxt/tests/fixtures`](packages/nuxt/tests/fixtures). Intercept analytics traffic locally and use synthetic tokens.
 
-Quality checks run on pushes to `main`. To check a pull request before merging, dispatch the Quality and coverage workflow with `pr_number`, or supply `ref` for a branch, tag, or commit. Manual runs do not publish packages.
+`pnpm check:install` verifies the core archive in a clean npm consumer, including peer resolution and SSR imports of every entry point.
 
-`pnpm check:install` installs the core archive into a clean npm consumer and imports every entry point during SSR. Required peers must resolve without direct helper dependencies. The Nuxt browser fixture checks the same installation boundary with pnpm.
+CI runs on pushes to `main`. To request a coverage report for a pull request, dispatch the [Coverage workflow](https://github.com/stefashkaa/minihog/actions/workflows/coverage.yml) with `pr_number`, or use `ref` for a branch, tag, or commit.
 
-`pnpm benchmark` compares the built client with the pinned PostHog SDK in fresh Chromium contexts. The SDK is a development dependency used only for comparison and never enters package artifacts or the demo. Raw measurements go to `output/comparison.json`; `pnpm comparison:update` also refreshes `COMPARISON.md`. The Browser comparison workflow runs the same benchmark manually and places its report in the job summary. Timing results are evidence, not noisy CI pass/fail thresholds.
+For bundle and runtime measurements, follow [COMPARISON.md](COMPARISON.md#reproduce).
 
 ## Package boundaries
 
@@ -37,10 +34,10 @@ Quality checks run on pushes to `main`. To check a pull request before merging, 
 - Each optional feature has a separate export and owns its listeners, timers, and cleanup.
 - `packages/nuxt` generates only the imports selected in module options. Its proxy accepts a fixed endpoint allowlist and never forwards site credentials.
 - Public exports resolve to `dist`. Test packed archives when changing exports, declarations, or runtime assets.
-- Keep the rrweb version and checksum pinned. Recorder updates require review of the compatibility patch, browser tests, and a PostHog ingestion/playback compatibility check.
+- Keep the rrweb version and checksum pinned in [`build-replay.mts`](packages/core/scripts/build-replay.mts). When updating rrweb, review its `Array.from` and native DOM method patches, run browser tests, and verify PostHog ingestion and playback.
 
 ## Pull requests
 
-Describe the behavior that changes and how it was verified. Include a regression test for a bug fix, update API documentation when behavior changes, and add a Changeset for public package changes with `pnpm changeset`.
+Describe the behavior that changes and how it was verified. Include a regression test for a bug fix, update API documentation when behavior changes, and add a [Changeset](.changeset/README.md) for public package changes. Maintainers can follow [RELEASE.md](RELEASE.md) to publish versions.
 
 Do not put project tokens, captured customer events, private recordings, or credentials in tests or issue reports. Report vulnerabilities through the process in [SECURITY.md](SECURITY.md).

@@ -29,12 +29,46 @@ async function open(page: Page, url = '/') {
 const snapshots = (events: CaptureEvent[]) =>
   events.filter((event) => event.event === '$snapshot').flatMap((event) => event.properties.$snapshot_data);
 
+async function countRecorderFrames(page: Page) {
+  await page.evaluate(() => {
+    const create = document.createElement;
+    document.documentElement.dataset.recorderFrames = '0';
+    document.createElement = ((...args: Parameters<typeof document.createElement>) => {
+      if (args[0].toLowerCase() === 'iframe') {
+        const root = document.documentElement;
+        root.dataset.recorderFrames = String(Number(root.dataset.recorderFrames) + 1);
+      }
+      return Reflect.apply(create, document, args);
+    }) as typeof document.createElement;
+  });
+}
+
 test('packed module preserves delayed startup, SPA events, masked replay and diagnostics', async ({ page }) => {
   const { events, requests, scripts } = await intercept(page);
   await open(page);
   expect(requests).toHaveLength(0);
+  await page.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = '.replay-visible-marker { color: rgb(12, 34, 56); }';
+    document.head.append(style);
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.id = 'REPLAY_NONVISUAL_SCRIPT';
+    script.textContent = '{"data":"not needed for playback"}';
+    document.head.append(script);
+    document.body.append(document.createComment('REPLAY_NONVISUAL_COMMENT'));
+    const visible = document.createElement('p');
+    visible.className = 'replay-visible-marker';
+    visible.textContent = 'REPLAY_VISIBLE_CONTENT';
+    document.body.append(visible);
+  });
+  await countRecorderFrames(page);
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('running');
+  await expect(page.locator('html')).toHaveAttribute('data-recorder-frames', '0');
+  await page.evaluate(() => {
+    document.querySelector('.replay-visible-marker')!.textContent = 'REPLAY_UPDATED_CONTENT';
+  });
   await page.evaluate(() => console.log('REPLAY_CONSOLE_MARKER'));
   await page.getByRole('button', { name: 'Record action' }).click();
   await page.getByRole('link', { name: 'About', exact: true }).click();
@@ -55,10 +89,64 @@ test('packed module preserves delayed startup, SPA events, masked replay and dia
   expect(replay).toContain('rrweb/console@1');
   expect(replay).toContain('REPLAY_CONSOLE_MARKER');
   expect(replay).toContain('rrweb/network@1');
+  expect(replay).toContain('REPLAY_VISIBLE_CONTENT');
+  expect(replay).toContain('REPLAY_UPDATED_CONTENT');
+  expect(replay).toContain('rgb(12, 34, 56)');
+  expect(replay).not.toContain('REPLAY_NONVISUAL_SCRIPT');
+  expect(replay).not.toContain('REPLAY_NONVISUAL_COMMENT');
   expect(replay).not.toContain('PRIVATE_REPLAY_VALUE');
   expect(scripts.every((url) => new URL(url).hostname === '127.0.0.1')).toBe(true);
   expect(requests.every((url) => !/\/static\/|\.js(?:\?|$)/.test(url))).toBe(true);
 });
+
+for (const patchedProperty of ['shadowRoot', 'querySelector', 'querySelectorAll', 'querySelector getter'] as const) {
+  test(`recorder recovers native DOM access when Element.${patchedProperty} is patched`, async ({ page }) => {
+    const { events } = await intercept(page);
+    await open(page);
+    await page.evaluate((property) => {
+      const host = document.createElement('section');
+      host.id = 'shadow-fixture';
+      const shadow = host.attachShadow({ mode: 'open' });
+      shadow.innerHTML =
+        '<style>p { color: rgb(12, 34, 56); }</style><p>SHADOW_REPLAY_CONTENT</p><input value="SHADOW_PRIVATE_VALUE">';
+      document.body.append(host);
+      if (property === 'shadowRoot') {
+        Object.defineProperty(Element.prototype, property, { configurable: true, get: () => null });
+      } else if (property === 'querySelector getter') {
+        const original = Element.prototype.querySelector;
+        Object.defineProperty(Element.prototype, 'querySelector', {
+          configurable: true,
+          get() {
+            if (this === Element.prototype) throw new Error('Recorder must not invoke a patched selector getter.');
+            return original;
+          }
+        });
+      } else {
+        const original = Element.prototype[property];
+        Object.defineProperty(Element.prototype, property, {
+          configurable: true,
+          value: function (this: Element, selectors: string) {
+            return Reflect.apply(original, this, [selectors]);
+          }
+        });
+      }
+    }, patchedProperty);
+    await countRecorderFrames(page);
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('running');
+    await expect(page.locator('html')).toHaveAttribute('data-recorder-frames', '1');
+    await page.evaluate(() => console.info('SHADOW_REPLAY_CONSOLE'));
+    await page.getByRole('button', { name: 'Stop', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('stopped');
+    const replay = JSON.stringify(snapshots(events));
+    expect(replay).toContain('SHADOW_REPLAY_CONTENT');
+    expect(replay).toContain('rgb(12, 34, 56)');
+    expect(replay).toContain('"isShadow":true');
+    expect(replay).not.toContain('SHADOW_PRIVATE_VALUE');
+    expect(replay).toContain('SHADOW_REPLAY_CONSOLE');
+    expect(replay).toContain('rrweb/network@1');
+  });
+}
 
 test('consent stops requests and opt-in restarts capture', async ({ page }) => {
   const { events, requests } = await intercept(page);
